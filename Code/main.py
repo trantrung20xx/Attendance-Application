@@ -6,7 +6,7 @@ from Lib.addanew_employee import create_add_employee_tab
 from Lib.uart_communication import UARTCommunication
 
 # Khởi tạo giao tiếp UART với ESP32
-# uart = UARTCommunication(port="COM3", baudrate=115200, timeout=2)
+uart = UARTCommunication(port="COM4", baudrate=115200, timeout=10)
 
 def on_tab_change(event):
     # Kiểm tra tab hiện tại
@@ -17,17 +17,6 @@ def on_tab_change(event):
         update_employee_list()
     else:
         stop_recognition()
-
-def send_command_to_esp32(command):
-    """Gửi lệnh đến ESP32"""
-    uart.send_command(command)
-
-def esp32_status_callback(command):
-    """Kiểm tra/nhận phản hồi từ ESP32"""
-    response = uart.read_response()
-    if response == f"{command}_OK":
-        return True
-    return False
 
 window = tkinter.Tk()
 window.title("Tab Interface")
@@ -44,7 +33,7 @@ notebook = Notebook(window)
 attendance_live_tab, start_recognition, stop_recognition = create_attendance_live_tab(notebook, width=900, height=500) # Gọi hàm từ attendance_live_tab.py
 attendance_list_tab = tkinter.Frame(notebook, bg="lightgreen", width=900, height=500)
 employee_management_tab, update_employee_list = create_employee_management_tab(notebook, width=500, height=500)
-add_employee_tab = create_add_employee_tab(notebook, send_command_to_esp32, esp32_status_callback, width=900, height=500)
+add_employee_tab = create_add_employee_tab(notebook, uart.send_command, uart.read_response, width=900, height=500)
 # Thêm các frame vào notebook dưới dạng các tab
 notebook.add(attendance_live_tab, text="Điểm danh")
 notebook.add(attendance_list_tab, text="Danh sách điểm danh")

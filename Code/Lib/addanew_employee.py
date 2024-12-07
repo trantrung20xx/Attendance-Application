@@ -12,7 +12,11 @@ from Lib import attendance_live_tab
 
 hasAuthenticated = False
 flag_hasFaceID = False
-def create_add_employee_tab(notebook, send_command_to_esp32, esp32_status_callback, width, height):
+fingerprint_data_1 = [None]
+fingerprint_data_2 = [None]
+rfid_data = [None]
+
+def create_add_employee_tab(notebook, send_command_to_esp32, esp32_data_callback, width, height):
     # Tạo tab Thêm nhân viên mới
     add_employee_tab = Frame(notebook, style="TFrame", width=width, height=height)
 
@@ -80,7 +84,7 @@ def create_add_employee_tab(notebook, send_command_to_esp32, esp32_status_callba
                     face_dataset.capture_face_data(video, face_cascade, save_dir, face_id, clahe)
                     hasAuthenticated = True # Đã có phương thức xác thực cho nhân viên đang thêm mới
                     flag_hasFaceID = True # Đã thêm khuôn mặt cho id nhân viên đang tạo mới
-                    face_status.config(text="Đã thêm", foreground="green")
+                    face_status.config(text="Đã thêm khuôn mặt", foreground="green")
                 except Exception as e:
                     message_label.config(text=f"Lỗi khi thêm khuôn mặt: {str(e)}", foreground="red")
                     flag_hasFaceID = False
@@ -91,18 +95,38 @@ def create_add_employee_tab(notebook, send_command_to_esp32, esp32_status_callba
         threading.Thread(target=start_face_capture, daemon=True).start()
 
     # Hàm gửi lệnh
-    def send_and_wait(command, status_label, success_text):
+    def send_and_wait(command, variable, status_label, instructions, success_text):
         def wait_for_response():
+            global hasAuthenticated
             send_command_to_esp32(command)
-            while True:
-                if esp32_status_callback(command):
+            status_label.config(text="Đã gửi", foreground="orange")
+            add_employee_tab.after(10000, lambda: message_label.config(text=""))
+            message_label.config(text=instructions, foreground="orange")
+            time.sleep(0.5) # Đợi để gửi dữ liệu tới ESP8266
+            response = esp32_data_callback() # Nhận phản hồi từ ESP8266
+            if response:
+                # Nhận ID RFID từ ESP8266
+                # Nếu là dữ liệu RFID và thuộc kiểu str
+                if response["type"] == "RFID" and isinstance(response["data"], str):
+                    variable[0] = response["data"]
                     status_label.config(text=success_text, foreground="green")
-                    break
-            time.sleep(0.5) # Đợi phản hồi từ ESP32
+                    hasAuthenticated = True
+                # Nhận mẫu vân tay từ ESP8266
+                # Nếu dữ liệu là FINGERPRINT và thuộc kiểu bytes
+                elif response["type"] == "FINGERPRINT" and isinstance(response["data"], bytes):
+                    variable[0] = response["data"]
+                    status_label.config(text=success_text, foreground="green")
+                    hasAuthenticated = True
+                else:
+                    variable[0] = None
+                    status_label.config(text="Thêm thất bại!", foreground="red")
+            else:
+                variable[0] = None
+                message_label.config(text="Không nhận được dữ liệu. Hãy gửi lại lệnh", foreground="red")
 
         threading.Thread(target=wait_for_response, daemon=True).start()
 
-    # Các thành phần cho sinh trắc học
+    # Sinh trắc học
     face_status = create_status_row(
         data_entry_frame, 1, "Khuôn mặt:",
         add_face,
@@ -110,17 +134,17 @@ def create_add_employee_tab(notebook, send_command_to_esp32, esp32_status_callba
     )
     fingerprint1_status = create_status_row(
         data_entry_frame, 2, "Vân tay 1:",
-        lambda: send_and_wait("ADD_FINGERPRINT1", fingerprint1_status, "Đã thêm vân tay 1"),
+        lambda: send_and_wait("GET_FINGERPRINT1", fingerprint_data_1, fingerprint1_status, "Vui lòng đặt ngón tay lên cảm biến...", "Đã thêm vân tay 1"),
         "Chưa thêm"
     )
     fingerprint2_status = create_status_row(
         data_entry_frame, 3, "Vân tay 2:",
-        lambda: send_and_wait("ADD_FINGERPRINT2", fingerprint2_status, "Đã thêm vân tay 2"),
+        lambda: send_and_wait("GET_FINGERPRINT2", fingerprint_data_2, fingerprint2_status, "Vui lòng đặt ngón tay lên cảm biến...", "Đã thêm vân tay 2"),
         "Chưa thêm"
     )
     rfid_status = create_status_row(
         data_entry_frame, 4, "RFID:",
-        lambda: send_and_wait("ADD_RFID", rfid_status, "Đã thêm RFID"),
+        lambda: send_and_wait("GET_RFID", rfid_data, rfid_status, "Vui lòng đặt thẻ lên cảm biến...", "Đã thêm RFID"),
         "Chưa thêm"
     )
 
@@ -158,21 +182,27 @@ def create_add_employee_tab(notebook, send_command_to_esp32, esp32_status_callba
             # Tạo nhân viên mới và lưu vào cơ sở dữ liệu
             new_employee = EmployeeManagement.create_employee(
                 name=name,
+                fingerprint_data_1=fingerprint_data_1[0],
+                fingerprint_data_2=fingerprint_data_2[0],
+                rfid_data=rfid_data[0],
                 department=department
             )
             if flag_hasFaceID: # Nếu có khuôn mặt mới thêm vào
                 message_label.config(text="Đang thêm nhân viên mới xin chờ...", foreground="orange")
                 # Training mô hình và lưu models
                 threading.Thread(target=perform_training, daemon=True).start()
+                flag_hasFaceID = False
             name_entry.delete(0, tk.END) # Làm trống ô nhập liệu
             department_entry.delete(0, tk.END) # Làm trống ô nhập liệu
-            flag_hasFaceID = False
         except Exception as e:
             message_label.config(text=f"Thêm nhân viên thất bại: {str(e)}", foreground="red")
             shutil.rmtree(os.path.join(face_training.base_path, name))
             threading.Thread(target=lambda: face_training.train_and_save_model(face_training.base_path, face_training.yml_file_path), daemon=True).start()
         finally:
             face_status.config(text="Chưa thêm", foreground="red")
+            fingerprint1_status.config(text="Chưa thêm", foreground="red")
+            fingerprint2_status.config(text="Chưa thêm", foreground="red")
+            rfid_status.config(text="Chưa thêm", foreground="red")
             hasAuthenticated = False # Reset trạng thái xác thực
 
     # Nút lưu
