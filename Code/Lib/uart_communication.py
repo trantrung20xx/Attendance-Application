@@ -17,12 +17,15 @@ class UARTCommunication:
         """Đọc phản hồi từ ESP8266"""
         if self.serial.is_open:
             try:
+                # Làm sạch bộ đệm trước khi nhận dữ liệu mới
+                self.serial.reset_input_buffer()  # Xóa bộ đệm
+                # Lấy dữ liệu
                 raw_response = self.serial.readline().decode().strip()
                 print(raw_response)
                 # Kiểm tra định dạng dữ liệu
                 if raw_response.startswith("RFID|"):
-                    # Sau khi nhận dữ liệu, làm sạch bộ đệm
-                    self.serial.flush()  # Xóa bộ đệm
+                    # Sau khi nhận dữ liệu thì làm sạch bộ đệm
+                    self.serial.reset_input_buffer()  # Xóa bộ đệm
                     # Lấy ID RFID
                     line = raw_response.split('|')
                     if len(line) == 2 and len(line[1]) == 8:
@@ -31,7 +34,7 @@ class UARTCommunication:
                     # Lấy mẫu vân tay
                     raw_template = self.serial.read(512) # Đọc 512 byte dữ liệu mẫu của vân tay
                      # Sau khi nhận dữ liệu, làm sạch bộ đệm
-                    self.serial.flush()  # Xóa bộ đệm
+                    self.serial.reset_input_buffer()  # Xóa bộ đệm
                     return {"type": "FINGERPRINT", "data": raw_template}
                 else:
                     return None

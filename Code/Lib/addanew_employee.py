@@ -94,34 +94,60 @@ def create_add_employee_tab(notebook, send_command_to_esp32, esp32_data_callback
         # Khởi chạy trong luồng mới
         threading.Thread(target=start_face_capture, daemon=True).start()
 
+    def timeout_counter(num, instructions, on_counter, status_label):
+        # Nếu vẫn chưa có dữ liệu vân tay hay rfid
+        if on_counter[0]:
+            if num < 0:
+                message_label.config(text="Hết thời gian chờ. Xin gửi lại lệnh")
+                status_label.config(text="Chưa thêm", foreground="red")
+                add_employee_tab.after(5000, lambda: message_label.config(text=""))
+                return
+            # Cập nhật lại thông báo với giá trị num mới
+            message_label.config(text=f"{instructions}({num})")
+            # Gọi lại hàm sau 1s với num - 1
+            add_employee_tab.after(1000, lambda: timeout_counter(num - 1, instructions, on_counter, status_label))
+        else:
+            message_label.config(text="")
+
     # Hàm gửi lệnh
     def send_and_wait(command, variable, status_label, instructions, success_text):
         def wait_for_response():
             global hasAuthenticated
+            on_counter = [True]
             send_command_to_esp32(command)
             status_label.config(text="Đã gửi", foreground="orange")
             add_employee_tab.after(10000, lambda: message_label.config(text=""))
-            message_label.config(text=instructions, foreground="orange")
+            timeout_counter(10, instructions, on_counter, status_label)
             time.sleep(0.5) # Đợi để gửi dữ liệu tới ESP8266
             response = esp32_data_callback() # Nhận phản hồi từ ESP8266
             if response:
                 # Nhận ID RFID từ ESP8266
-                # Nếu là dữ liệu RFID và thuộc kiểu str
-                if response["type"] == "RFID" and isinstance(response["data"], str):
-                    variable[0] = response["data"]
-                    status_label.config(text=success_text, foreground="green")
-                    hasAuthenticated = True
+                if command == "GET_RFID":
+                    # Nếu là dữ liệu RFID và thuộc kiểu str
+                    if response["type"] == "RFID" and isinstance(response["data"], str):
+                        variable[0] = response["data"]
+                        status_label.config(text=success_text, foreground="green")
+                        hasAuthenticated = True
+                        on_counter[0] = False
+                    else:
+                        variable[0] = None
+                        on_counter[0] = False
+                        status_label.config(text="Thêm thất bại!", foreground="red")
                 # Nhận mẫu vân tay từ ESP8266
-                # Nếu dữ liệu là FINGERPRINT và thuộc kiểu bytes
-                elif response["type"] == "FINGERPRINT" and isinstance(response["data"], bytes):
-                    variable[0] = response["data"]
-                    status_label.config(text=success_text, foreground="green")
-                    hasAuthenticated = True
-                else:
-                    variable[0] = None
-                    status_label.config(text="Thêm thất bại!", foreground="red")
+                elif command == "GET_FINGERPRINT1" or command == "GET_FINGERPRINT2":
+                    # Nếu dữ liệu là FINGERPRINT và thuộc kiểu bytes
+                    if response["type"] == "FINGERPRINT" and isinstance(response["data"], bytes):
+                        variable[0] = response["data"]
+                        status_label.config(text=success_text, foreground="green")
+                        hasAuthenticated = True
+                        on_counter[0] = False
+                    else:
+                        variable[0] = None
+                        on_counter[0] = False
+                        status_label.config(text="Thêm thất bại!", foreground="red")
             else:
                 variable[0] = None
+                on_counter[0] = False
                 message_label.config(text="Không nhận được dữ liệu. Hãy gửi lại lệnh", foreground="red")
 
         threading.Thread(target=wait_for_response, daemon=True).start()
