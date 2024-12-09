@@ -6,7 +6,7 @@ from tkinter.ttk import *
 import threading
 from Lib.employee_management import EmployeeManagement
 from Lib import face_dataset, face_training
-from Lib import attendance_live_tab
+from Lib import attendance_live_tab, uart
 from Lib.attendance_live_tab import face_cascade, video, clahe
 
 # Biến ghi nhận thay đổi dữ liệu của khuôn mặt
@@ -140,6 +140,61 @@ class EmployeeEditWindow:
             self.rfid_status.config(text="Đã có", fg="green")
             self.add_rfid_button.config(state="disabled")
             self.remove_face_button.config(state="normal")
+
+    def timeout_counter(self, num, instructions, on_counter, status_label):
+        # Nếu vẫn chưa có dữ liệu vân tay hay rfid
+        if on_counter[0]:
+            if num < 0:
+                self.message_label.config(text="Hết thời gian chờ. Xin gửi lại lệnh")
+                status_label.config(text="Chưa có", foreground="red")
+                self.window.after(5000, lambda: self.message_label.config(text=""))
+                return
+            # Cập nhật lại thông báo với giá trị num mới
+            self.message_label.config(text=f"{instructions}({num})")
+            # Gọi lại hàm sau 1s với num - 1
+            self.window.after(1000, lambda: timeout_counter(num - 1, instructions, on_counter, status_label))
+        else:
+            self.message_label.config(text="")
+
+    # Hàm gửi lệnh
+    def send_and_wait(self, command, variable, status_label, instructions, success_text):
+        def wait_for_response():
+            on_counter = [True]
+            uart.send_command(command)
+            status_label.config(text="Đã gửi", fg="orange")
+            self.window.after(10000, lambda: self.message_label.config(text=""))
+            timeout_counter(10, instructions, on_counter, status_label)
+            time.sleep(0.5) # Đợi để gửi dữ liệu tới ESP8266
+            response = uart.read_response() # Nhận phản hồi từ ESP8266
+            if response:
+                # Nhận ID RFID từ ESP8266
+                if command == "GET_RFID":
+                    # Nếu là dữ liệu RFID và thuộc kiểu str
+                    if response["type"] == "RFID" and isinstance(response["data"], str):
+                        variable[0] = response["data"]
+                        status_label.config(text=success_text, fg="green")
+                        on_counter[0] = False
+                    else:
+                        variable[0] = None
+                        on_counter[0] = False
+                        status_label.config(text="Thêm thất bại!", fg="red")
+                # Nhận mẫu vân tay từ ESP8266
+                elif command == "GET_FINGERPRINT1" or command == "GET_FINGERPRINT2":
+                    # Nếu dữ liệu là FINGERPRINT và thuộc kiểu bytes
+                    if response["type"] == "FINGERPRINT" and isinstance(response["data"], bytes):
+                        variable[0] = response["data"]
+                        status_label.config(text=success_text, fg="green")
+                        on_counter[0] = False
+                    else:
+                        variable[0] = None
+                        on_counter[0] = False
+                        status_label.config(text="Thêm thất bại!", fg="red")
+            else:
+                variable[0] = None
+                on_counter[0] = False
+                self.message_label.config(text="Không nhận được dữ liệu. Hãy gửi lại lệnh", fg="red")
+
+        threading.Thread(target=wait_for_response, daemon=True).start()
 
     def add_face(self):
         self.add_face_button.config(state="disabled")

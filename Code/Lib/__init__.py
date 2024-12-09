@@ -1,4 +1,4 @@
-# from . import face_recognition
-# from . import face_dataset
-# from . import face_training
-from . import attendance_live_tab
+from Lib.uart_communication import UARTCommunication
+
+# Khởi tạo giao tiếp UART với ESP32
+uart = UARTCommunication(port="COM4", baudrate=115200, timeout=10)
