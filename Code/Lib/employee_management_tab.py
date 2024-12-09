@@ -6,6 +6,7 @@ from Lib.employee_management import EmployeeManagement
 from Lib import face_training
 import threading
 from Lib.employee_edit_window import EmployeeEditWindow
+from Lib import attendance_live_tab
 
 # from employee_management import EmployeeManagement
 
@@ -71,6 +72,8 @@ def create_employee_management_tab(notebook, width, height):
         tree.delete(*tree.get_children()) # Xóa tất cả các dòng hiện tại
         # Lấy danh sách nhân viên mới từ cơ sở dữ liệu
         employee_list = EmployeeManagement.fetch_all_employees() # Dữ liệu mới
+        if employee_list:
+            attendance_live_tab.is_recognizer_initialized = False
         for index, employee in enumerate(employee_list):
             # Thêm nhân viên vào cuối bảng (thêm dòng mới)
             # Áp dụng màu sắc xen kẽ

@@ -126,12 +126,20 @@ class EmployeeEditWindow:
         # Cập nhật tình trạng dữ liệu sinh trắc học
         if self.check_hasFaceID():
             self.face_status.config(text="Đã có", fg="green")
+            self.add_face_button.config(state="disabled")
+            self.remove_face_button.config(state="normal")
         if self.employee.fingerprint_data_1:
             self.fingerprint1_status.config(text="Đã có", fg="green")
+            self.add_fingerprint1_button.config(state="disabled")
+            self.remove_face_button.config(state="normal")
         if self.employee.fingerprint_data_2:
             self.fingerprint2_status.config(text="Đã có", fg="green")
+            self.add_fingerprint2_button.config(state="disabled")
+            self.remove_face_button.config(state="normal")
         if self.employee.rfid_data:
             self.rfid_status.config(text="Đã có", fg="green")
+            self.add_rfid_button.config(state="disabled")
+            self.remove_face_button.config(state="normal")
 
     def add_face(self):
         self.add_face_button.config(state="disabled")

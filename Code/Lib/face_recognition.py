@@ -57,7 +57,7 @@ def detect_faces(img, face_cascade, min_width, min_height):
     """
     return face_cascade.detectMultiScale(
         img,
-        scaleFactor=1.3,
+        scaleFactor=1.1,
         minNeighbors=5,
         minSize=(int(min_width), int(min_height))
     )
