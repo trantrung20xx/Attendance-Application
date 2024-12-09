@@ -11,13 +11,13 @@ def capture_frame(video):
     frame = cv2.flip(frame, 1)  # Lật ngang hình ảnh
     return frame
 
-def create_save_directory(base_path, face_name):
+def create_save_directory(base_path, face_data):
     """
     Tạo thư mục lưu trữ dữ liệu khuôn mặt.
     - base_path: đường dẫn gốc.
-    - face_name: tên của người dùng.
+    - face_data: Tên folder lưu dữ liệu khuôn mặt.
     """
-    save_dir = os.path.join(base_path, face_name)
+    save_dir = os.path.join(base_path, face_data)
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
     return save_dir

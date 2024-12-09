@@ -66,28 +66,27 @@ def create_add_employee_tab(notebook, send_command_to_esp32, esp32_data_callback
     # Hàm thêm khuôn mặt mới
     def add_face():
         def start_face_capture():
-            global hasAuthenticated, flag_hasFaceID, base_path
-            name = name_entry.get().strip()
-            department = department_entry.get().strip()
+            global hasAuthenticated, flag_hasFaceID
+            # name = name_entry.get().strip()
+            # department = department_entry.get().strip()
 
-            if not name: # Nếu tên để trống
-                message_label.config(text="Vui lòng nhập tên trước khi thêm khuôn mặt", foreground="red")
-                return
-            if not department: # Nếu phòng ban để trống
-                message_label.config(text="Vui lòng nhập phòng ban trước khi thêm khuôn mặt", foreground="red")
-                return
+            # if not name: # Nếu tên để trống
+            #     message_label.config(text="Vui lòng nhập tên trước khi thêm khuôn mặt", foreground="red")
+            #     return
+            # if not department: # Nếu phòng ban để trống
+            #     message_label.config(text="Vui lòng nhập phòng ban trước khi thêm khuôn mặt", foreground="red")
+            #     return
             if not flag_hasFaceID:
                 try:
                     face_id = ODBEmployee.get_current_id()
                     employee_id = f"EMP{face_id:05d}"
-                    save_dir = face_dataset.create_save_directory(face_training.base_path, name + "_" + employee_id)
+                    save_dir = face_dataset.create_save_directory(face_training.base_path, employee_id)
                     face_dataset.capture_face_data(video, face_cascade, save_dir, face_id, clahe)
                     hasAuthenticated = True # Đã có phương thức xác thực cho nhân viên đang thêm mới
                     flag_hasFaceID = True # Đã thêm khuôn mặt cho id nhân viên đang tạo mới
                     face_status.config(text="Đã thêm khuôn mặt", foreground="green")
                 except Exception as e:
                     message_label.config(text=f"Lỗi khi thêm khuôn mặt: {str(e)}", foreground="red")
-                    flag_hasFaceID = False
                     flag_hasFaceID = False
             else:
                 message_label.config(text=f"Bạn đã thêm khuôn mặt rồi!", foreground="red")
@@ -195,11 +194,11 @@ def create_add_employee_tab(notebook, send_command_to_esp32, esp32_data_callback
         def perform_training():
             try:
                 face_training.train_and_save_model(face_training.base_path, face_training.yml_file_path)
-                add_employee_tab.after(0, lambda: message_label.config(text="Thêm nhân viên thành công!", foreground="green"))
+                message_label.config(text="Thêm nhân viên thành công!", foreground="green")
                 attendance_live_tab.is_recognizer_initialized = True
             except Exception as e:
                 print(f"Lỗi trong perform_training: {str(e)}")
-                add_employee_tab.after(0, lambda: message_label.config(text=f"Lỗi training: {str(e)}", foreground="red"))
+                message_label.config(text=f"Lỗi training: {str(e)}", foreground="red")
             finally:
                 # Tự động xóa thông báo sau 5 giây
                 add_employee_tab.after(5000, lambda: message_label.config(text=""))
@@ -215,15 +214,22 @@ def create_add_employee_tab(notebook, send_command_to_esp32, esp32_data_callback
             )
             if flag_hasFaceID: # Nếu có khuôn mặt mới thêm vào
                 message_label.config(text="Đang thêm nhân viên mới xin chờ...", foreground="orange")
-                # Training mô hình và lưu models
+                # Training và lưu mô hình
                 threading.Thread(target=perform_training, daemon=True).start()
                 flag_hasFaceID = False
+            else:
+                message_label.config(text="Thêm nhân viên thành công!", foreground="green")
+                
             name_entry.delete(0, tk.END) # Làm trống ô nhập liệu
             department_entry.delete(0, tk.END) # Làm trống ô nhập liệu
+            fingerprint_data_1[0] = None
+            fingerprint_data_2[0] = None
+            rfid_data[0] = None
         except Exception as e:
             message_label.config(text=f"Thêm nhân viên thất bại: {str(e)}", foreground="red")
-            shutil.rmtree(os.path.join(face_training.base_path, name))
+            shutil.rmtree(os.path.join(face_training.base_path, new_employee.employee_id))
             threading.Thread(target=lambda: face_training.train_and_save_model(face_training.base_path, face_training.yml_file_path), daemon=True).start()
+            flag_hasFaceID = False
         finally:
             face_status.config(text="Chưa thêm", foreground="red")
             fingerprint1_status.config(text="Chưa thêm", foreground="red")

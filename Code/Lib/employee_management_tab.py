@@ -120,11 +120,11 @@ def create_employee_management_tab(notebook, width, height):
         if confirmation:
             # Xóa thư mục chứa ảnh của nhân viên cần xóa
             for root, dirname, files in os.walk(face_training.base_path):
-                for path_nameid in dirname:
-                    path_nameid = os.path.join(root, path_nameid) # Đường dẫn đến folder chứa ảnh của nhân viên cần xóa
-                    nameid = os.path.split(path_nameid)[-1].split('_') # Lấy ra tên folder chứa ảnh của nhân viên cần xóa
-                    if nameid[0] == name and nameid[1] == employee_id:
-                        shutil.rmtree(path_nameid)
+                for path_face_data in dirname:
+                    path_face_data = os.path.join(root, path_face_data) # Đường dẫn đến folder chứa ảnh của nhân viên cần xóa
+                    face_data = os.path.split(path_face_data)[-1] # Lấy ra tên folder chứa ảnh của nhân viên cần xóa
+                    if face_data == employee_id:
+                        shutil.rmtree(path_face_data)
                         break
 
             EmployeeManagement.delete_employee(employee_id) # Thực hiện xóa từ cơ sở dữ liệu
