@@ -11,6 +11,9 @@ odb = pyodbc.connect(
 
 cursor = odb.cursor()
 
+start_time_ = [22, 5, 0]
+end_time_ = [22, 30, 0]
+
 class ODBEmployee:
     # Lấy giá trị bộ đếm hiện tại từ cơ sở dữ liệu
     @staticmethod
@@ -87,8 +90,8 @@ class ODBEmployee:
         # Cài đặt thời gian bắt đầu/kết thúc giờ làm
         now = datetime.now() # Lấy thời gian gồm năm/tháng/ngày giờ/phút/giây
         today = now.date() # chỉ lấy năm/tháng/ngày
-        start_time = datetime.combine(today, time(8, 0, 0)) # Giờ bắt đầu ca làm
-        end_time = datetime.combine(today, time(17, 0, 0)) # Giờ kết thúc ca làm
+        start_time = datetime.combine(today, time(start_time_[0], start_time_[1], start_time_[2])) # Giờ bắt đầu ca làm
+        end_time = datetime.combine(today, time(end_time_[0], end_time_[1], end_time_[2])) # Giờ kết thúc ca làm
 
         # Set giá trị cho thuộc tính check_in_time
         self.check_in_time = now.strftime("%Y-%m-%d %H:%M:%S")
@@ -110,7 +113,7 @@ class ODBEmployee:
                 deltatime = now - start_time
                 hour, remainder = divmod(deltatime.seconds, 3600) # (deltatime.seconds//3600, deltatime.seconds%3600)
                 minutes = remainder // 60
-                self.status_1 = f"Muộn ({hour:.02d}:{minutes:.02d})"
+                self.status_1 = f"Muộn {hour:02d} giờ {minutes:02d} phút"
             # Cập nhật thời gian điểm danh lên cơ sở dữ liệu
             cursor.execute(
                 """
@@ -130,8 +133,8 @@ class ODBEmployee:
         # Cài đặt thời gian bắt đầu/kết thúc giờ làm
         now = datetime.now() # Lấy thời gian gồm năm/tháng/ngày giờ/phút/giây
         today = now.date() # chỉ lấy năm/tháng/ngày
-        start_time = datetime.combine(today, time(8, 0, 0)) # Giờ bắt đầu ca làm
-        end_time = datetime.combine(today, time(17, 0, 0)) # Giờ kết thúc ca làm
+        start_time = datetime.combine(today, time(start_time_[0], start_time_[1], start_time_[2])) # Giờ bắt đầu ca làm
+        end_time = datetime.combine(today, time(end_time_[0], end_time_[1], end_time_[2])) # Giờ kết thúc ca làm
 
         # Set giá trị cho thuộc tính check_out_time
         self.check_out_time = now.strftime("%Y-%m-%d %H:%M:%S")
@@ -146,7 +149,7 @@ class ODBEmployee:
             (self.employee_id, today)
         )
         record_time = cursor.fetchone()
-        if record_time: # Đã điểm danh trong ngày -> Cập nhật
+        if record_time and record_time[3] != '-' and record_time[4] == '-': # Đã điểm danh trong ngày -> Cập nhật
             log_id, check_in_time, check_out_time, status_1, status_2 = record_time
             if now >= end_time: # Nếu điểm danh khi đã tan làm
                 self.status_2 = 'Đúng giờ'
@@ -154,7 +157,7 @@ class ODBEmployee:
                 deltatime = end_time - now
                 hour, remainder = divmod(deltatime.seconds, 3600) # (deltatime.seconds//3600, deltatime.seconds%3600)
                 minutes = remainder // 60
-                self.status_2 = f"Về trước {hour:.02d}:{minutes:.02d}"
+                self.status_2 = f"Về trước {hour:02d} giờ {minutes:02d} phút"
             # Cập nhật thời gian điểm danh về lên cơ sở dữ liệu
             # Cập nhật CheckOutTime và Status_2
             cursor.execute(

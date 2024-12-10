@@ -9,9 +9,10 @@ def on_tab_change(event):
     # Kiểm tra tab hiện tại
     selected_tab = notebook.tab(notebook.select(), "text")
     if selected_tab == "Điểm danh":
-        start_recognition()
+        stop_recognition()
     elif selected_tab == "Quản lý nhân viên":
         update_employee_list()
+        stop_recognition()
     else:
         stop_recognition()
 
@@ -48,6 +49,8 @@ tkinter.Label(employee_management_tab, text="Quản lý nhân viên", font=("Ari
 
 # Theo dõi sự kiện chuyển đổi tab
 notebook.bind("<<NotebookTabChanged>>", on_tab_change)
+
+stop_recognition()
 
 # Chạy vòng lặp chính
 window.mainloop()

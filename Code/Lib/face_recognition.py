@@ -95,6 +95,9 @@ def recognize_faces_live(webcam, recognizer, face_cascade, clahe, employee_list)
     # Phát hiện khuôn mặt
     faces = detect_faces(gray_img, face_cascade, minWidth, minHeight)
 
+    # Lưu danh sách nhân viên đã nhận diện được
+    recognized_employees = []
+
     for (x, y, w, h) in faces:
         # cv2.rectangle(img, (x, y), (x+w, y+h), (0, 255, 0), 2)  # Vẽ hình vuông quanh khuôn mặt
         id, confidence = recognizer.predict(gray_img[y:y+h, x:x+w]) # Nhận diện khuôn mặt
@@ -103,27 +106,10 @@ def recognize_faces_live(webcam, recognizer, face_cascade, clahe, employee_list)
         for employee in employee_list:
             if employee.face_id == id and confidence < 70:
                 name = employee.name
+                recognized_employees.append(employee)  # Thêm nhân viên vào danh sách
                 break
         color = (255, 0, 0) if name != "Unknown" else (0, 0, 255)
         # Vẽ hình vuông quanh khuôn mặt và hiển thị tên
         draw_face_info(img, x, y, w, h, name, color, font)
 
-    return img  # Trả về hình ảnh đã nhận diện khuôn mặt
-
-def main():
-    print('\n[INFO] THE PROGRAM IS INITIALIZING. PLEASE WAIT A FEW SECONDS...')
-    recognizer = initialize_recognizer(yml_file)
-    face_cascade = initialize_face_cascade()
-    webcam = initialize_camera(width=640, height=480)
-    clahe = initialize_clahe()
-    print('\n[INFO] INITIALIZATION SUCCESSFUL')
-
-    employee_list = employee_management.EmployeeManagement.fetch_all_employees()  # Danh sách nhân viên từ cơ sở dữ liệu
-    recognize_faces_live(webcam, recognizer, face_cascade, clahe, employee_list)
-
-    print('[INFO] PROGRAM ENDED')
-    webcam.release()
-    cv2.destroyAllWindows()
-
-if __name__ == "__main__":
-    main()
+    return img, recognized_employees  # Trả về hình ảnh và danh sách nhân viên đã được nhận diện
