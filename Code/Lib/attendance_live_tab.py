@@ -102,12 +102,13 @@ def update_frame(canvas, photo_container, running, parent_window, check_type, in
     """Hàm cập nhật khung hình video."""
     if not running[0]:
         # Hiển thị ảnh mặc định
-        default_img = os.path.join(os.path.dirname(os.path.abspath(__file__)), "default_img", "61eca5e1977c749582c65cb58f1e6b83.jpg")
+        default_img = os.path.join(os.path.dirname(os.path.abspath(__file__)), "default_img", "istockphoto-661804394-1024x1024.jpg")
         img = cv2.imread(default_img)
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)  # Chuyển hệ màu
         img = PIL.Image.fromarray(img) # Chuyển đổi sang định dạng PIL
-        img = img.resize((520, 480), PIL.Image.Resampling.LANCZOS)  # Sử dụng LANCZOS để làm mịn ảnh
+        img = img.resize((520, 465), PIL.Image.Resampling.LANCZOS)  # Sử dụng LANCZOS để làm mịn ảnh
         img = PIL.ImageTk.PhotoImage(image=img) # Chuyển ảnh từ array sang tkinter image và vẽ lên canvas
+        photo_container[0] = img  # Cập nhật ảnh mới vào container
         canvas.create_image(0, 0, image=img, anchor=tkinter.NW) # Vẽ ảnh vào canvas hiển thị lên màn hình
         return
 
@@ -186,6 +187,15 @@ def create_attendance_live_tab(parent_window, width, height):
     def stop_recognition():
         """Dừng nhận diện khuôn mặt."""
         running[0] = False
+        # Hiển thị ảnh mặc định
+        default_img = os.path.join(os.path.dirname(os.path.abspath(__file__)), "default_img", "istockphoto-661804394-1024x1024.jpg")
+        img = cv2.imread(default_img)
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)  # Chuyển hệ màu
+        img = PIL.Image.fromarray(img) # Chuyển đổi sang định dạng PIL
+        img = img.resize((520, 465), PIL.Image.Resampling.LANCZOS)  # Sử dụng LANCZOS để làm mịn ảnh
+        img = PIL.ImageTk.PhotoImage(image=img) # Chuyển ảnh từ array sang tkinter image và vẽ lên canvas
+        photo_container[0] = img  # Cập nhật ảnh mới vào container
+        canvas.create_image(0, 0, image=img, anchor=tkinter.NW) # Vẽ ảnh vào canvas hiển thị lên màn hình
 
     # Tạo phần bên dưới hiển thị các nút điều khiển
     controls_frame = create_controls_frame(right_frame, start_recognition, stop_recognition)

@@ -67,15 +67,15 @@ def create_add_employee_tab(notebook, send_command_to_esp32, esp32_data_callback
     def add_face():
         def start_face_capture():
             global hasAuthenticated, flag_hasFaceID
-            # name = name_entry.get().strip()
-            # department = department_entry.get().strip()
+            name = name_entry.get().strip()
+            department = department_entry.get().strip()
 
-            # if not name: # Nếu tên để trống
-            #     message_label.config(text="Vui lòng nhập tên trước khi thêm khuôn mặt", foreground="red")
-            #     return
-            # if not department: # Nếu phòng ban để trống
-            #     message_label.config(text="Vui lòng nhập phòng ban trước khi thêm khuôn mặt", foreground="red")
-            #     return
+            if not name: # Nếu tên để trống
+                message_label.config(text="Vui lòng nhập tên trước khi thêm khuôn mặt", foreground="red")
+                return
+            if not department: # Nếu phòng ban để trống
+                message_label.config(text="Vui lòng nhập phòng ban trước khi thêm khuôn mặt", foreground="red")
+                return
             if not flag_hasFaceID:
                 try:
                     face_id = ODBEmployee.get_current_id()
@@ -219,7 +219,7 @@ def create_add_employee_tab(notebook, send_command_to_esp32, esp32_data_callback
                 flag_hasFaceID = False
             else:
                 message_label.config(text="Thêm nhân viên thành công!", foreground="green")
-                
+
             name_entry.delete(0, tk.END) # Làm trống ô nhập liệu
             department_entry.delete(0, tk.END) # Làm trống ô nhập liệu
             fingerprint_data_1[0] = None
