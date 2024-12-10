@@ -70,17 +70,16 @@ class EmployeeManagement:
         employee = cursor.fetchone()
         if not employee: # Nếu không tồn tại
             return False
-        # Cập nhật thông tin nếu có thay đổi
-        if name:
-            cursor.execute("UPDATE Employees SET Name_ = ? WHERE EmployeeID = ?", (name, employee_id))
-        if fingerprint_data_1:
-            cursor.execute("UPDATE Employees SET FingerprintData1 = ? WHERE EmployeeID = ?", (fingerprint_data_1, employee_id))
-        if fingerprint_data_2:
-            cursor.execute("UPDATE Employees SET FingerprintData2 = ? WHERE EmployeeID = ?", (fingerprint_data_2, employee_id))
-        if rfid_data:
-            cursor.execute("UPDATE Employees SET RFIDData = ? WHERE EmployeeID = ?", (rfid_data, employee_id))
-        if department:
-            cursor.execute("UPDATE Employees SET Department =? WHERE EmployeeID =?", (department, employee_id))
+        # Cập nhật Tên
+        cursor.execute("UPDATE Employees SET Name_ = ? WHERE EmployeeID = ?", (name, employee_id))
+        # Cập nhật dữ liệu vân tay thứ nhất
+        cursor.execute("UPDATE Employees SET FingerprintData1 = ? WHERE EmployeeID = ?", (fingerprint_data_1, employee_id))
+        # Cập nhật dữ liệu vân tay thứ hai
+        cursor.execute("UPDATE Employees SET FingerprintData2 = ? WHERE EmployeeID = ?", (fingerprint_data_2, employee_id))
+        # Cập nhật dữ liệu thẻ RFID
+        cursor.execute("UPDATE Employees SET RFIDData = ? WHERE EmployeeID = ?", (rfid_data, employee_id))
+        # Cập nhật phòng ban
+        cursor.execute("UPDATE Employees SET Department =? WHERE EmployeeID =?", (department, employee_id))
         odb.commit() # Lưu thay đổi
         return True
 

@@ -1,5 +1,6 @@
 import os
 import shutil
+import time
 import tkinter as tk
 from tkinter import messagebox
 from tkinter.ttk import *
@@ -125,72 +126,90 @@ class EmployeeEditWindow:
     def update_biometric_status(self):
         # Cập nhật tình trạng dữ liệu sinh trắc học
         if self.check_hasFaceID():
-            self.face_status.config(text="Đã có", fg="green")
+            self.face_status.config(text="Đã thêm khuôn mặt", fg="green")
             self.add_face_button.config(state="disabled")
             self.remove_face_button.config(state="normal")
         if self.employee.fingerprint_data_1:
-            self.fingerprint1_status.config(text="Đã có", fg="green")
+            self.fingerprint1_status.config(text="Đã thêm vân tay 1", fg="green")
             self.add_fingerprint1_button.config(state="disabled")
-            self.remove_face_button.config(state="normal")
+            self.remove_fingerprint1_button.config(state="normal")
         if self.employee.fingerprint_data_2:
-            self.fingerprint2_status.config(text="Đã có", fg="green")
+            self.fingerprint2_status.config(text="Đã thêm vân tay 2", fg="green")
             self.add_fingerprint2_button.config(state="disabled")
-            self.remove_face_button.config(state="normal")
+            self.remove_fingerprint2_button.config(state="normal")
         if self.employee.rfid_data:
-            self.rfid_status.config(text="Đã có", fg="green")
+            self.rfid_status.config(text="Đã thêm RFID", fg="green")
             self.add_rfid_button.config(state="disabled")
-            self.remove_face_button.config(state="normal")
+            self.remove_rfid_button.config(state="normal")
 
     def timeout_counter(self, num, instructions, on_counter, status_label):
         # Nếu vẫn chưa có dữ liệu vân tay hay rfid
         if on_counter[0]:
             if num < 0:
-                self.message_label.config(text="Hết thời gian chờ. Xin gửi lại lệnh")
-                status_label.config(text="Chưa có", foreground="red")
+                self.message_label.config(text="Hết thời gian chờ. Xin gửi lại lệnh", fg="orange")
+                status_label.config(text="Chưa thêm", fg="red")
                 self.window.after(5000, lambda: self.message_label.config(text=""))
                 return
             # Cập nhật lại thông báo với giá trị num mới
-            self.message_label.config(text=f"{instructions}({num})")
+            self.message_label.config(text=f"{instructions}({num})", fg="orange")
             # Gọi lại hàm sau 1s với num - 1
-            self.window.after(1000, lambda: timeout_counter(num - 1, instructions, on_counter, status_label))
+            self.window.after(1000, lambda: self.timeout_counter(num - 1, instructions, on_counter, status_label))
         else:
             self.message_label.config(text="")
 
     # Hàm gửi lệnh
-    def send_and_wait(self, command, variable, status_label, instructions, success_text):
+    def send_and_wait(self, command, status_label, instructions, success_text):
         def wait_for_response():
             on_counter = [True]
             uart.send_command(command)
             status_label.config(text="Đã gửi", fg="orange")
             self.window.after(10000, lambda: self.message_label.config(text=""))
-            timeout_counter(10, instructions, on_counter, status_label)
-            time.sleep(0.5) # Đợi để gửi dữ liệu tới ESP8266
-            response = uart.read_response() # Nhận phản hồi từ ESP8266
+            self.timeout_counter(10, instructions, on_counter, status_label)
+            time.sleep(0.3) # Đợi để gửi dữ liệu tới ESP8266
+
+            # Nhận phản hồi từ ESP8266
+            response = uart.read_response()
+
             if response:
                 # Nhận ID RFID từ ESP8266
                 if command == "GET_RFID":
                     # Nếu là dữ liệu RFID và thuộc kiểu str
                     if response["type"] == "RFID" and isinstance(response["data"], str):
-                        variable[0] = response["data"]
+                        self.employee.rfid_data = response["data"]
                         status_label.config(text=success_text, fg="green")
                         on_counter[0] = False
+                        self.remove_rfid_button.config(state="normal")
+                        self.add_rfid_button.config(state="disabled")
                     else:
-                        variable[0] = None
+                        self.employee.rfid_data = None
                         on_counter[0] = False
                         status_label.config(text="Thêm thất bại!", fg="red")
                 # Nhận mẫu vân tay từ ESP8266
-                elif command == "GET_FINGERPRINT1" or command == "GET_FINGERPRINT2":
+                elif command == "GET_FINGERPRINT1":
                     # Nếu dữ liệu là FINGERPRINT và thuộc kiểu bytes
                     if response["type"] == "FINGERPRINT" and isinstance(response["data"], bytes):
-                        variable[0] = response["data"]
+                        self.employee.fingerprint_data_1 = response["data"]
                         status_label.config(text=success_text, fg="green")
                         on_counter[0] = False
+                        self.remove_fingerprint1_button.config(state="normal")
+                        self.add_fingerprint1_button.config(state="disabled")
                     else:
-                        variable[0] = None
+                        self.employee.fingerprint_data_1 = None
+                        on_counter[0] = False
+                        status_label.config(text="Thêm thất bại!", fg="red")
+                elif command == "GET_FINGERPRINT2":
+                    # Nếu dữ liệu là FINGERPRINT và thuộc kiểu bytes
+                    if response["type"] == "FINGERPRINT" and isinstance(response["data"], bytes):
+                        self.employee.fingerprint_data_2 = response["data"]
+                        status_label.config(text=success_text, fg="green")
+                        on_counter[0] = False
+                        self.remove_fingerprint2_button.config(state="normal")
+                        self.add_fingerprint2_button.config(state="disabled")
+                    else:
+                        self.employee.fingerprint_data_2 = None
                         on_counter[0] = False
                         status_label.config(text="Thêm thất bại!", fg="red")
             else:
-                variable[0] = None
                 on_counter[0] = False
                 self.message_label.config(text="Không nhận được dữ liệu. Hãy gửi lại lệnh", fg="red")
 
@@ -205,7 +224,7 @@ class EmployeeEditWindow:
                 save_dir = face_dataset.create_save_directory(face_training.base_path, employee_id)
                 face_dataset.capture_face_data(video, face_cascade, save_dir, face_id, clahe)
 
-                self.face_status.config(text="Đã có", fg="green")
+                self.face_status.config(text="Đã thêm khuôn mặt", fg="green")
                 self.remove_face_button.config(state="normal")
                 has_changed[0] = True
             except Exception as e:
@@ -228,31 +247,28 @@ class EmployeeEditWindow:
             messagebox.showinfo("Lỗi", f"Lỗi training: {str(e)}")
 
     def add_fingerprint1(self):
-        self.fingerprint1_status.config(text="Đã có", fg="green")
-        self.remove_fingerprint1_button.config(state="normal")
-        self.add_fingerprint1_button.config(state="disabled")
+        self.send_and_wait("GET_FINGERPRINT1", self.fingerprint1_status, "Vui lòng đặt ngón tay lên cảm biến...", "Đã thêm vân tay 1")
 
     def remove_fingerprint1(self):
+        self.employee.fingerprint_data_1 = None
         self.fingerprint1_status.config(text="Chưa thêm", fg="red")
         self.remove_fingerprint1_button.config(state="disabled")
         self.add_fingerprint1_button.config(state="normal")
 
     def add_fingerprint2(self):
-        self.fingerprint2_status.config(text="Đã có", fg="green")
-        self.remove_fingerprint2_button.config(state="normal")
-        self.add_fingerprint2_button.config(state="disabled")
+        self.send_and_wait("GET_FINGERPRINT2", self.fingerprint2_status, "Vui lòng đặt ngón tay lên cảm biến...", "Đã thêm vân tay 2")
 
     def remove_fingerprint2(self):
+        self.employee.fingerprint_data_2 = None
         self.fingerprint2_status.config(text="Chưa thêm", fg="red")
         self.remove_fingerprint2_button.config(state="disabled")
         self.add_fingerprint2_button.config(state="normal")
 
     def add_rfid(self):
-        self.rfid_status.config(text="Đã có", fg="green")
-        self.remove_rfid_button.config(state="normal")
-        self.add_rfid_button.config(state="disabled")
+        self.send_and_wait("GET_RFID", self.rfid_status, "Vui lòng đặt thẻ lên cảm biến...", "Đã thêm RFID")
 
     def remove_rfid(self):
+        self.employee.rfid_data = None
         self.rfid_status.config(text="Chưa thêm", fg="red")
         self.remove_rfid_button.config(state="disabled")
         self.add_rfid_button.config(state="normal")
@@ -286,9 +302,11 @@ class EmployeeEditWindow:
             messagebox.showinfo("Thành công", "Cập nhật thông tin nhân viên thành công.")
             self.update_employee_list()  # Gọi hàm cập nhật danh sách
             if has_changed[0]: # Nếu dữ liệu khuôn mặt đã có thay đổi
-                self.message_label.config(text="Đang thêm nhân viên mới xin chờ...", fg="orange")
+                # self.message_label.config(text="Đang thêm nhân viên mới xin chờ...", fg="orange")
                 # Training và lưu mô hình
                 threading.Thread(target=self.perform_training, daemon=True).start()
+                has_changed[0] = False # Đặt lại trạng thái khuôn mặt sau khi lưu
+            self.update_biometric_status() # Cập nhật trạng thái giao diện
             self.window.destroy()
         else:
             messagebox.showerror("Lỗi", "Cập nhật thất bại.")
