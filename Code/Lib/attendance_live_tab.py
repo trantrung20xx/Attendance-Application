@@ -31,74 +31,89 @@ is_recognizer_initialized = False
 def create_video_frame(parent_frame, width, height):
     """Tạo frame để hiển thị video."""
     video_frame = tkinter.Frame(parent_frame)
-    video_frame.pack(side=tkinter.LEFT, padx=10, pady=10, fill=tkinter.Y)
+    video_frame.pack(side=tkinter.LEFT, padx=5, pady=10, fill=tkinter.Y)
     canvas = tkinter.Canvas(video_frame, width=width, height=height)
     canvas.pack()
     return canvas
 
 def create_info_frame(parent_frame):
     """Tạo frame để hiển thị thông tin nhân viên."""
-    info_frame = tkinter.Frame(parent_frame, bg='white', width=350, height=480)
-    info_frame.pack(side=tkinter.TOP, padx=10, pady=10, fill=tkinter.BOTH, expand=True)
+    info_frame = tkinter.Frame(parent_frame, bg='white', height=480)
+    info_frame.pack(side=tkinter.TOP, padx=5, pady=(5, 0), fill=tkinter.BOTH, expand=True)
 
-    # Hiển thị thông tin
-    info_label = tkinter.Label(info_frame, text="Thông tin điểm danh", font=("Arial", 14), bg="white")
-    info_label.pack(anchor=tkinter.NW, padx=10, pady=10)
+    # Tiêu đề
+    info_label = tkinter.Label(info_frame, text="Thông tin điểm danh", font=("Arial", 17, "bold"), bg="white")
+    info_label.pack(anchor=tkinter.NW, padx=10, pady=(15, 25))
 
-    info_text = tkinter.Text(info_frame, wrap=tkinter.WORD, font=("Arial", 12), bg="lightgray", height=10)
-    info_text.pack(fill=tkinter.BOTH, expand=True, padx=10, pady=10)
-    return info_text
+    # Tạo các hàng/trường để hiển thị từng trường thông tin
+    fields = ["Mã nhân viên", "Tên nhân viên", "Phòng ban", "Thời gian", "Trạng thái"]
+    labels = {}  # Dictionary lưu các nhãn (Label) cho từng trường
+
+    for field in fields:
+        # Tạo khung chứa từng hàng thông tin
+        field_frame = tkinter.Frame(info_frame, bg="white")
+        field_frame.pack(fill=tkinter.X, padx=10, pady=10)
+
+        # Tên trường
+        field_label = tkinter.Label(field_frame, text=field + ":", font=("Arial", 14), bg="white")
+        field_label.pack(side=tkinter.LEFT, padx=5)
+
+        # Ô hiển thị thông tin
+        value_label = tkinter.Label(
+            field_frame, text="Trống", font=("Arial", 13), bg="white", anchor="w",
+            relief="flat", bd=0, highlightthickness=0, highlightcolor="black", highlightbackground="black"
+        )
+        value_label.pack(side=tkinter.RIGHT, fill=tkinter.X, expand=True, padx=5, ipady=5)
+        labels[field] = value_label  # Lưu Label vào dictionary để cập nhật sau
+
+    return labels
 
 def create_controls_frame(parent_frame, start_recognition, stop_recognition):
     """Tạo frame chứa các nút chức năng."""
-    controls_frame = tkinter.Frame(parent_frame, bg='lightgray', width=200)
-    controls_frame.pack(side=tkinter.BOTTOM, fill=tkinter.X, padx=10, pady=10)
+    controls_frame = tkinter.Frame(parent_frame, bg='white')
+    controls_frame.pack(side=tkinter.BOTTOM, fill=tkinter.BOTH, padx=5, pady=(0, 5), ipady=5)
 
-    # Tạo một container cho các nút chức năng để dễ dàng điều khiển
-    button_frame = tkinter.Frame(controls_frame, bg='lightgray')
+    # Tạo một frame cho các nút chức năng để dễ dàng điều khiển
+    button_frame = tkinter.Frame(controls_frame, bg='white')
     button_frame.pack(side=tkinter.TOP, fill=tkinter.X, padx=10, pady=10)
 
     # Tạo nút điều khiển Check-in
     check_in_button = tkinter.Button(
-        button_frame, text="Check-in", font=("Arial", 12),
+        button_frame, text="Check-in", font=("Arial", 13),
         command=lambda: start_recognition("check_in")
     )
-    check_in_button.pack(side=tkinter.LEFT, expand=True, fill=tkinter.X, padx=5)
+    check_in_button.pack(side=tkinter.LEFT, expand=True, fill=tkinter.X, padx=5, ipady=5)
 
     # Tạo nút điều khiển Check-out
     check_out_button = tkinter.Button(
-        button_frame, text="Check-out", font=("Arial", 12),
+        button_frame, text="Check-out", font=("Arial", 13),
         command=lambda: start_recognition("check_out")
     )
-    check_out_button.pack(side=tkinter.LEFT, expand=True, fill=tkinter.X, padx=5)
+    check_out_button.pack(side=tkinter.LEFT, expand=True, fill=tkinter.X, padx=5, ipady=5)
 
     # Tạo nút dừng nhận diện
     stop_button = tkinter.Button(
-        button_frame, text="Dừng", font=("Arial", 12),
+        button_frame, text="Dừng", font=("Arial", 13),
         command=stop_recognition
     )
-    stop_button.pack(side=tkinter.LEFT, expand=True, fill=tkinter.X, padx=5)
+    stop_button.pack(side=tkinter.LEFT, expand=True, fill=tkinter.X, padx=5, ipady=5)
 
     return controls_frame
 
-def update_info_text(employee, info_text, check_type):
-    """Cập nhật thông tin nhân viên sau khi điểm danh vào khung thông tin."""
-    info_text.delete('1.0', tkinter.END)  # Xóa nội dung cũ
-    info_text.insert(
-        tkinter.END,
-        f"Mã nhân viên: {employee.employee_id}\n"
-        f"Tên nhân viên: {employee.name}\n"
-        f"Phòng ban: {employee.department}\n"
-    )
+def update_info_text(employee, info_labels, check_type):
+    """Cập nhật thông tin nhân viên vào các Label."""
+    info_labels["Mã nhân viên"].config(text=employee.employee_id if employee else " Trống")
+    info_labels["Tên nhân viên"].config(text=employee.name if employee else " Trống")
+    info_labels["Phòng ban"].config(text=employee.department if employee else " Trống")
 
     if check_type == "check_in":
-        info_text.insert(tkinter.END, f"Thời gian điểm danh vào: {employee.check_in_time}\n")
-        info_text.insert(tkinter.END, f"Trạng thái điểm danh vào: {employee.status_1}\n")
+        info_labels["Thời gian"].config(text=employee.check_in_time if employee else " Trống")
+        info_labels["Trạng thái"].config(text=employee.status_1 if employee else " Trống")
     elif check_type == "check_out":
-        info_text.insert(tkinter.END, f"Thời gian điểm danh ra: {employee.check_out_time}\n")
-        info_text.insert(tkinter.END, f"Trạng thái điểm danh ra: {employee.status_2}\n")
+        info_labels["Thời gian"].config(text=employee.check_out_time if employee else " Trống")
+        info_labels["Trạng thái"].config(text=employee.status_2 if employee else " Trống")
 
-def update_frame(canvas, photo_container, running, parent_window, check_type, info_text):
+def update_frame(canvas, photo_container, running, parent_window, check_type, info_labels):
     """Hàm cập nhật khung hình video."""
     if not running[0]:
         # Hiển thị ảnh mặc định
@@ -123,10 +138,18 @@ def update_frame(canvas, photo_container, running, parent_window, check_type, in
         # Điểm danh
         for employee in employees:
             # Thực hiện điểm danh dựa trên loại điểm danh (check-in hoặc check-out)
-            if check_type == "check_in" and employee.check_in():
-                update_info_text(employee, info_text, check_type="check_in")
-            elif check_type == "check_out" and employee.check_out():
-                update_info_text(employee, info_text, check_type="check_out")
+            if check_type == "check_in":
+                if employee.check_in():
+                    update_info_text(employee, info_labels, check_type="check_in")
+                else:
+                    update_info_text(employee, info_labels, check_type="check_in")
+
+            elif check_type == "check_out":
+                if employee.check_out():
+                    update_info_text(employee, info_labels, check_type="check_out")
+                else:
+                    update_info_text(employee, info_labels, check_type="check_out")
+
 
     elif video is not None:
         # Đọc khung hình từ camera
@@ -141,7 +164,7 @@ def update_frame(canvas, photo_container, running, parent_window, check_type, in
         canvas.create_image(0, 0, image=img, anchor=tkinter.NW) # Vẽ ảnh vào canvas hiển thị lên màn hình
 
     # Sau 15ms thì chạy lại lệnh update_frame
-    parent_window.after(15, lambda: update_frame(canvas, photo_container, running, parent_window, check_type, info_text))
+    parent_window.after(15, lambda: update_frame(canvas, photo_container, running, parent_window, check_type, info_labels))
 
 def create_attendance_live_tab(parent_window, width, height):
     attendance_frame = tkinter.Frame(parent_window, bg='lightblue', width=width, height=height)
@@ -165,24 +188,37 @@ def create_attendance_live_tab(parent_window, width, height):
     running = [False]
 
     # Tạo phần bên phải (Chia thông tin và nút)
-    right_frame = tkinter.Frame(main_frame)
-    right_frame.pack(side=tkinter.RIGHT, fill=tkinter.Y)
+    right_frame = tkinter.Frame(main_frame, height=canvas_height)
+    right_frame.pack(side=tkinter.LEFT, fill=tkinter.BOTH, expand=True, padx=10, pady=10)
 
     # Tạo phần bên trên hiển thị thông tin nhân viên
-    info_text = create_info_frame(right_frame)
+    info_labels = create_info_frame(right_frame)
 
     def start_recognition(check_type):
         global recognizer, is_recognizer_initialized
         """Bắt đầu nhận diện khuôn mặt."""
+
+        # Dừng chức năng hiện tại nếu đang chạy
+        if running[0]:
+            running[0] = False
+
+        # Đặt lại trạng thái sau 50ms để đảm bảo chuyển đổi hoàn chỉnh
+        parent_window.after(50, lambda: begin_recognition(check_type))
+
+    def begin_recognition(check_type):
+        global recognizer, is_recognizer_initialized
+        """Thực hiện khởi động nhận diện khuôn mặt sau khi chuyển trạng thái."""
+        # Khởi tạo nhận diện khuôn mặt nếu cần
         if is_recognizer_initialized and recognizer is None:
             recognizer = face_recognition.initialize_recognizer(face_recognition.yml_file_path)
             is_recognizer_initialized = True
         if recognizer is None:
             messagebox.showwarning("Warning", "Chưa có dữ liệu nhận diện khuôn mặt. Vui lòng thêm dữ liệu!")
+            return
 
-        if not running[0]:
-            running[0] = True
-            update_frame(canvas, photo_container, running, parent_window, check_type, info_text)
+        # Bắt đầu trạng thái mới
+        running[0] = True
+        update_frame(canvas, photo_container, running, parent_window, check_type, info_labels)
 
     def stop_recognition():
         """Dừng nhận diện khuôn mặt."""
@@ -192,7 +228,7 @@ def create_attendance_live_tab(parent_window, width, height):
         img = cv2.imread(default_img)
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)  # Chuyển hệ màu
         img = PIL.Image.fromarray(img) # Chuyển đổi sang định dạng PIL
-        img = img.resize((520, 465), PIL.Image.Resampling.LANCZOS)  # Sử dụng LANCZOS để làm mịn ảnh
+        img = img.resize((canvas_width, canvas_height - 15), PIL.Image.Resampling.LANCZOS)  # Sử dụng LANCZOS để làm mịn ảnh
         img = PIL.ImageTk.PhotoImage(image=img) # Chuyển ảnh từ array sang tkinter image và vẽ lên canvas
         photo_container[0] = img  # Cập nhật ảnh mới vào container
         canvas.create_image(0, 0, image=img, anchor=tkinter.NW) # Vẽ ảnh vào canvas hiển thị lên màn hình

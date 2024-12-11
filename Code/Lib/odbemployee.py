@@ -11,8 +11,8 @@ odb = pyodbc.connect(
 
 cursor = odb.cursor()
 
-start_time_ = [22, 5, 0]
-end_time_ = [22, 30, 0]
+start_time_ = [8, 0, 0]
+end_time_ = [17, 0, 0]
 
 class ODBEmployee:
     # Lấy giá trị bộ đếm hiện tại từ cơ sở dữ liệu
@@ -93,9 +93,6 @@ class ODBEmployee:
         start_time = datetime.combine(today, time(start_time_[0], start_time_[1], start_time_[2])) # Giờ bắt đầu ca làm
         end_time = datetime.combine(today, time(end_time_[0], end_time_[1], end_time_[2])) # Giờ kết thúc ca làm
 
-        # Set giá trị cho thuộc tính check_in_time
-        self.check_in_time = now.strftime("%Y-%m-%d %H:%M:%S")
-
         # Kiểm tra bản ghi thời gian điểm danh của ngày hôm nay
         cursor.execute(
             """
@@ -114,6 +111,10 @@ class ODBEmployee:
                 hour, remainder = divmod(deltatime.seconds, 3600) # (deltatime.seconds//3600, deltatime.seconds%3600)
                 minutes = remainder // 60
                 self.status_1 = f"Muộn {hour:02d} giờ {minutes:02d} phút"
+
+            # Set giá trị cho thuộc tính check_in_time
+            self.check_in_time = now.strftime("%Y-%m-%d - %H:%M:%S")
+
             # Cập nhật thời gian điểm danh lên cơ sở dữ liệu
             cursor.execute(
                 """
@@ -136,9 +137,6 @@ class ODBEmployee:
         start_time = datetime.combine(today, time(start_time_[0], start_time_[1], start_time_[2])) # Giờ bắt đầu ca làm
         end_time = datetime.combine(today, time(end_time_[0], end_time_[1], end_time_[2])) # Giờ kết thúc ca làm
 
-        # Set giá trị cho thuộc tính check_out_time
-        self.check_out_time = now.strftime("%Y-%m-%d %H:%M:%S")
-
         # Kiểm tra bản ghi thời gian điểm danh của ngày hôm nay
         cursor.execute(
             """
@@ -158,6 +156,10 @@ class ODBEmployee:
                 hour, remainder = divmod(deltatime.seconds, 3600) # (deltatime.seconds//3600, deltatime.seconds%3600)
                 minutes = remainder // 60
                 self.status_2 = f"Về trước {hour:02d} giờ {minutes:02d} phút"
+
+            # Set giá trị cho thuộc tính check_out_time
+            self.check_out_time = now.strftime("%Y-%m-%d - %H:%M:%S")
+
             # Cập nhật thời gian điểm danh về lên cơ sở dữ liệu
             # Cập nhật CheckOutTime và Status_2
             cursor.execute(

@@ -18,7 +18,7 @@ def on_tab_change(event):
 
 window = tkinter.Tk()
 window.title("Tab Interface")
-window.geometry("900x500")
+window.geometry("1000x500")
 
 # Tạo một style mới để thay đổi font của tiêu đề tab
 style = Style()
@@ -28,10 +28,10 @@ style.configure("TNotebook.Tab", font=("Arial", 13), padding=[5, 5])  # Đặt p
 notebook = Notebook(window)
 
 # Tạo các frame cho từng tab
-attendance_live_tab, start_recognition, stop_recognition = create_attendance_live_tab(notebook, width=900, height=500) # Gọi hàm từ attendance_live_tab.py
-attendance_list_tab = tkinter.Frame(notebook, bg="lightgreen", width=900, height=500)
-employee_management_tab, update_employee_list = create_employee_management_tab(notebook, width=500, height=500)
-add_employee_tab = create_add_employee_tab(notebook, uart.send_command, uart.read_response, width=900, height=500)
+attendance_live_tab, start_recognition, stop_recognition = create_attendance_live_tab(notebook, width=1000, height=500) # Gọi hàm từ attendance_live_tab.py
+attendance_list_tab = tkinter.Frame(notebook, bg="lightgreen", width=1000, height=500)
+employee_management_tab, update_employee_list = create_employee_management_tab(notebook, width=1000, height=500)
+add_employee_tab = create_add_employee_tab(notebook, uart.send_command, uart.read_response, width=1000, height=500)
 # Thêm các frame vào notebook dưới dạng các tab
 notebook.add(attendance_live_tab, text="Điểm danh")
 notebook.add(attendance_list_tab, text="Danh sách điểm danh")

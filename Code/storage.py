@@ -1,14 +1,24 @@
-class Wrapper:
-    def __init__(self, value):
-        self.value = value
+import tkinter as tk
 
-def pass_by_refer(variable):
-    variable.value += 10
+root = tk.Tk()
 
-a = Wrapper(10)
+# Label với các kiểu relief khác nhau
+label_flat = tk.Label(root, text="Flat", relief="flat", width=20, height=2)
+label_flat.pack(padx=10, pady=5)
 
-print(a.value)
+label_raised = tk.Label(root, text="Raised", relief="raised", width=20, height=2)
+label_raised.pack(padx=10, pady=5)
 
-pass_by_refer(a)
+label_sunken = tk.Label(root, text="Sunken", relief="sunken", width=20, height=2)
+label_sunken.pack(padx=10, pady=5)
 
-print(a.value)  # Output 20
+label_solid = tk.Label(root, text="Solid", relief="solid", width=20, height=2)
+label_solid.pack(padx=10, pady=5)
+
+label_groove = tk.Label(root, text="Groove", relief="groove", width=20, height=2)
+label_groove.pack(padx=10, pady=5)
+
+label_ridge = tk.Label(root, text="Ridge", relief="ridge", width=20, height=2)
+label_ridge.pack(padx=10, pady=5)
+
+root.mainloop()
