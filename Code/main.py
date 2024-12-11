@@ -13,6 +13,8 @@ def on_tab_change(event):
     elif selected_tab == "Quản lý nhân viên":
         update_employee_list()
         stop_recognition()
+    elif selected_tab == "Danh sách điểm danh":
+        pass
     else:
         stop_recognition()
 

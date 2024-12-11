@@ -94,6 +94,7 @@ class EmployeeManagement:
         if not employee: # Nếu không tồn tại
             return False
         # Xóa nhân viên
+        cursor.execute("DELETE FROM AttendanceLogs WHERE EmployeeID = ?", (employee_id,))
         cursor.execute("DELETE FROM Employees WHERE EmployeeID = ?", (employee_id,))
         odb.commit() # Lưu thay đổi
         return True

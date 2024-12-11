@@ -125,6 +125,9 @@ class ODBEmployee:
             )
             odb.commit()
             return True # Cập nhật thành công
+        else:
+            self.check_in_time = record_time[1].strftime("%Y-%m-%d - %H:%M:%S")
+            self.status_1 = record_time[3]
         return False # Cập nhật không thành công
 
     def check_out(self):
@@ -147,29 +150,33 @@ class ODBEmployee:
             (self.employee_id, today)
         )
         record_time = cursor.fetchone()
-        if record_time and record_time[3] != '-' and record_time[4] == '-': # Đã điểm danh trong ngày -> Cập nhật
-            log_id, check_in_time, check_out_time, status_1, status_2 = record_time
-            if now >= end_time: # Nếu điểm danh khi đã tan làm
-                self.status_2 = 'Đúng giờ'
-            else: # Nếu sớm hơn
-                deltatime = end_time - now
-                hour, remainder = divmod(deltatime.seconds, 3600) # (deltatime.seconds//3600, deltatime.seconds%3600)
-                minutes = remainder // 60
-                self.status_2 = f"Về trước {hour:02d} giờ {minutes:02d} phút"
+        if record_time:
+            if record_time[3] != '-' and record_time[4] == '-': # Đã điểm danh trong ngày -> Cập nhật
+                log_id, check_in_time, check_out_time, status_1, status_2 = record_time
+                if now >= end_time: # Nếu điểm danh khi đã tan làm
+                    self.status_2 = 'Đúng giờ'
+                else: # Nếu sớm hơn
+                    deltatime = end_time - now
+                    hour, remainder = divmod(deltatime.seconds, 3600) # (deltatime.seconds//3600, deltatime.seconds%3600)
+                    minutes = remainder // 60
+                    self.status_2 = f"Về trước {hour:02d} giờ {minutes:02d} phút"
 
-            # Set giá trị cho thuộc tính check_out_time
-            self.check_out_time = now.strftime("%Y-%m-%d - %H:%M:%S")
+                # Set giá trị cho thuộc tính check_out_time
+                self.check_out_time = now.strftime("%Y-%m-%d - %H:%M:%S")
 
-            # Cập nhật thời gian điểm danh về lên cơ sở dữ liệu
-            # Cập nhật CheckOutTime và Status_2
-            cursor.execute(
-                """
-                UPDATE AttendanceLogs
-                SET CheckOutTime = ?, Status_2 = ?
-                WHERE LogID = ?
-                """,
-                (now, self.status_2, log_id)
-            )
-            odb.commit()
-            return True # Cập nhật thành công
+                # Cập nhật thời gian điểm danh về lên cơ sở dữ liệu
+                # Cập nhật CheckOutTime và Status_2
+                cursor.execute(
+                    """
+                    UPDATE AttendanceLogs
+                    SET CheckOutTime = ?, Status_2 = ?
+                    WHERE LogID = ?
+                    """,
+                    (now, self.status_2, log_id)
+                )
+                odb.commit()
+                return True # Cập nhật thành công
+            else:
+                self.check_out_time = record_time[2].strftime("%Y-%m-%d - %H:%M:%S")
+                self.status_2 = record_time[4]
         return False # Cập nhật không thành công

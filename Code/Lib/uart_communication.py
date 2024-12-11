@@ -79,7 +79,7 @@ def cosine_similarity(data1, data2):
 
 if __name__ == "__main__":
     listFingerTemplate = [b'0', b'0']
-    uart = UARTCommunication(port="COM4", baudrate=115200, timeout=10)
+    uart = UARTCommunication(port="COM4", baudrate=115200, timeout=5)
     count = 1
     flag = 0
     while True:

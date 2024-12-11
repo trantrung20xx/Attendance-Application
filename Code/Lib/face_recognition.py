@@ -58,11 +58,11 @@ def detect_faces(img, face_cascade, min_width, min_height):
     return face_cascade.detectMultiScale(
         img,
         scaleFactor=1.1,
-        minNeighbors=5,
+        minNeighbors=7,
         minSize=(int(min_width), int(min_height))
     )
 
-def draw_face_info(img, x, y, w, h, name, color, font):
+def draw_face_info(img, x, y, w, h, id, name, color, font):
     """ Vẽ thông tin khuôn mặt lên img. """
     # confidence_text = f" {round(100 - confidence)}%"
     cv2.rectangle(img, (x, y), (x + w, y + h), color, 2)
@@ -74,6 +74,8 @@ def draw_face_info(img, x, y, w, h, name, color, font):
     draw = ImageDraw.Draw(img_pil)
 
     # Vẽ văn bản Unicode
+    if name != "Unknown":
+        draw.text((x + 7, y - 48), f"Mã NV: {id}", font=font, fill=(127, 127, 255))
     draw.text((x + 7, y - 28), name, font=font, fill=(127, 127, 255))
 
     # Chuyển đổi ảnh PIL trở lại OpenCV
@@ -88,7 +90,10 @@ def recognize_faces_live(webcam, recognizer, face_cascade, clahe, employee_list)
     minHeight = 0.080 * webcam.get(4)
 
     # Đọc hình ảnh từ camera
-    _, img = webcam.read()
+    ret, img = webcam.read()
+    if not ret or img is None:
+        return
+
     img = cv2.flip(img, 1)  # Lật hình ảnh theo chiều ngang
     gray_img = preprocess_frame(img, clahe)  # Xử lý ảnh
 
@@ -104,12 +109,12 @@ def recognize_faces_live(webcam, recognizer, face_cascade, clahe, employee_list)
         # Kiểm tra độ tin cậy và lấy tên
         name = "Unknown"
         for employee in employee_list:
-            if employee.face_id == id and confidence < 70:
+            if employee.face_id == id and confidence < 45:
                 name = employee.name
                 recognized_employees.append(employee)  # Thêm nhân viên vào danh sách
                 break
         color = (255, 0, 0) if name != "Unknown" else (0, 0, 255)
         # Vẽ hình vuông quanh khuôn mặt và hiển thị tên
-        draw_face_info(img, x, y, w, h, name, color, font)
+        draw_face_info(img, x, y, w, h, f"EMP{id:05d}", name, color, font)
 
     return img, recognized_employees  # Trả về hình ảnh và danh sách nhân viên đã được nhận diện
