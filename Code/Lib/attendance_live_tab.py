@@ -6,7 +6,7 @@ import cv2
 import PIL.Image, PIL.ImageTk
 import threading, time
 from Lib import face_recognition, face_dataset, face_training, employee_management
-from Lib import employee_list, uart
+from Lib import employee_list, uart, on_attandance
 from Lib.uart_communication import jaccard_index, cosine_similarity, minutiae_based_matching
 
 def initialize_video_components(width, height):
@@ -162,7 +162,7 @@ def update_frame(canvas, photo_container, running, parent_window, check_type, in
     # Sau 15ms thì chạy lại lệnh update_frame
     parent_window.after(15, lambda: update_frame(canvas, photo_container, running, parent_window, check_type, info_labels))
 
-def attandance_with_uart_data(on_attandance, info_labels):
+def attandance_with_uart_data(info_labels):
     """Chức năng điểm danh với vân tay và rfid"""
     uart.send_command("GET_DATA")
     time.sleep(0.3)
@@ -187,8 +187,8 @@ def attandance_with_uart_data(on_attandance, info_labels):
                                 update_info_text(employee, info_labels, check_type="check_out")
                 elif response["type"] == "FINGERPRINT" and isinstance(response["data"], bytes):
                     for employee in employee_list:
-                        ret_fingerprint1, match_score = minutiae_based_matching(employee.fingerprint_data_1, response["data"], threshold=0.6)
-                        ret_fingerprint2, match_score2 = minutiae_based_matching(employee.fingerprint_data_2, response["data"], threshold=0.6)
+                        ret_fingerprint1, _ = minutiae_based_matching(employee.fingerprint_data_1, response["data"], threshold=0.615)
+                        ret_fingerprint2, _ = minutiae_based_matching(employee.fingerprint_data_2, response["data"], threshold=0.615)
                         if ret_fingerprint1 or ret_fingerprint2:
                             if employee.status_1 == '-':
                                 employee.check_in()
@@ -221,7 +221,6 @@ def create_attendance_live_tab(parent_window, width, height):
     # Quản lý trạng thái chạy
     photo_container = [None]
     running = [False]
-    on_attandance = [True]
 
     # Tạo phần bên phải (Chia thông tin và nút)
     right_frame = tkinter.Frame(main_frame, height=canvas_height)
@@ -231,9 +230,9 @@ def create_attendance_live_tab(parent_window, width, height):
     info_labels = create_info_frame(right_frame)
 
     # Bắt đầu đọc dữ liệu vân tay và rfid từ ESP8266 để điểm danh
-    thread = threading.Thread(target=attandance_with_uart_data, args=(on_attandance, info_labels))
-    thread.daemon = True  # Luồng phụ, sẽ tự động đóng khi chương trình chính kết thúc
-    thread.start()
+    # thread = threading.Thread(target=attandance_with_uart_data, args=(info_labels,))
+    # thread.daemon = True  # Luồng phụ, sẽ tự động đóng khi chương trình chính kết thúc
+    # thread.start()
 
     def start_recognition(check_type):
         global recognizer, is_recognizer_initialized
@@ -280,4 +279,4 @@ def create_attendance_live_tab(parent_window, width, height):
     # Tạo phần bên dưới hiển thị các nút điều khiển
     controls_frame = create_controls_frame(right_frame, start_recognition, stop_recognition)
 
-    return attendance_frame, start_recognition, stop_recognition
+    return attendance_frame, start_recognition, stop_recognition, info_labels

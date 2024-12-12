@@ -6,6 +6,10 @@ uart = UARTCommunication(port="COM4", baudrate=115200, timeout=10)
 
 # Lấy danh sách nhân viên từ cơ sở dữ liệu
 employee_list = employee_management.EmployeeManagement.fetch_all_employees()
+
 # Hàm cập nhật danh sách nhân viên từ cơ sở dữ liệu
 def get_employee_list(employee_list):
     employee_list = employee_management.EmployeeManagement.fetch_all_employees()
+
+# Biến bật/tắt điểm danh bằng rfid và vân tay
+on_attandance = [True]
