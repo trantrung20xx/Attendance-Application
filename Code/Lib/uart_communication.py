@@ -92,11 +92,11 @@ def cosine_similarity(data1, data2):
     return similarity
 
 ############################## Thuật toán Minutiae-based Matching ##################################
-def improved_fingerprint_matching(template1, template2, threshold=0.6):
+def minutiae_based_matching(template1, template2, threshold=0.6):
     def extract_minutiae_details(template):
         minutiae = []
         # Giải mã chi tiết từng điểm minutiae
-        for i in range(0, 512, 32):  # Giả sử mỗi minutiae 32 byte
+        for i in range(0, 512, 32):  # Mỗi minutiae 32 byte
             x = (template[i] << 8) | template[i+1]
             y = (template[i+2] << 8) | template[i+3]
             angle = template[i+4]
@@ -173,9 +173,9 @@ if __name__ == "__main__":
             if flag % 2 == 0:
                 if len(listFingerTemplate[0]) == 512 and len(listFingerTemplate[1]) == 512:
                     print(f"{listFingerTemplate[0].hex()} - {listFingerTemplate[1].hex()}")
-                    match_score = improved_fingerprint_matching(listFingerTemplate[0], listFingerTemplate[1], threshold=0.6)
                     jaccard_score = jaccard_index(listFingerTemplate[0], listFingerTemplate[1])
                     similarity = cosine_similarity(listFingerTemplate[0], listFingerTemplate[1])
+                    match_score = minutiae_based_matching(listFingerTemplate[0], listFingerTemplate[1], threshold=0.6)
                     print(f"Tỉ lệ trùng khớp với phương pháp jaccard: {jaccard_score}")
                     print(f"Tỉ lệ trùng với phương pháp cosine similarity: {similarity}")
                     print(f"Tỉ lệ trùng với thuật toán Minutiae-based Matching: {match_score}")

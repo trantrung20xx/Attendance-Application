@@ -4,10 +4,10 @@ from tkinter.ttk import *
 from tkinter import messagebox
 import cv2
 import PIL.Image, PIL.ImageTk
-from threading import Thread
+import threading, time
 from Lib import face_recognition, face_dataset, face_training, employee_management
 from Lib import employee_list, uart
-from Lib.uart_communication import jaccard_index, cosine_similarity
+from Lib.uart_communication import jaccard_index, cosine_similarity, minutiae_based_matching
 
 def initialize_video_components(width, height):
     try:
@@ -168,25 +168,38 @@ def attandance_with_uart_data(on_attandance, info_labels):
     time.sleep(0.3)
     while on_attandance[0]:
         try:
+            # Xóa bộ đệm trước khi nhận dữ liệu mới
+            uart.serial.reset_input_buffer()
             # Lấy dữ liệu
             raw_response = uart.serial.readline().decode().strip()
             if raw_response.startswith("ATTANDANCE|"):
                 # Nhận dữ liệu từ ESP8266
-                response = uart.read_response()
+                response = uart.read_response(onreset=False)
                 # Nếu là dữ liệu RFID và thuộc kiểu str
                 if response["type"] == "RFID" and isinstance(response["data"], str):
                     for employee in employee_list:
                         if employee.rfid_data == response["data"]:
                             if employee.status_1 == '-':
                                 employee.check_in()
+                                update_info_text(employee, info_labels, check_type="check_in")
                             elif employee.status_1 != '-' and employee.status_2 == '-':
                                 employee.check_out()
-                            update_info_text(employee, info_labels, check_type="check_in")
+                                update_info_text(employee, info_labels, check_type="check_out")
                 elif response["type"] == "FINGERPRINT" and isinstance(response["data"], bytes):
                     for employee in employee_list:
-                        pass
+                        ret_fingerprint1, match_score = minutiae_based_matching(employee.fingerprint_data_1, response["data"], threshold=0.6)
+                        ret_fingerprint2, match_score2 = minutiae_based_matching(employee.fingerprint_data_2, response["data"], threshold=0.6)
+                        if ret_fingerprint1 or ret_fingerprint2:
+                            if employee.status_1 == '-':
+                                employee.check_in()
+                                update_info_text(employee, info_labels, check_type="check_in")
+                            elif employee.status_1!= '-' and employee.status_2 == '-':
+                                employee.check_out()
+                                update_info_text(employee, info_labels, check_type="check_out")
         except Exception as e:
             print(f"Lỗi: {e}")
+        time.sleep(1) # tránh chiếm quá nhiều tài nguyên CPU
+    print("ENDED")
 
 def create_attendance_live_tab(parent_window, width, height):
     attendance_frame = tkinter.Frame(parent_window, bg='lightblue', width=width, height=height)
@@ -208,6 +221,7 @@ def create_attendance_live_tab(parent_window, width, height):
     # Quản lý trạng thái chạy
     photo_container = [None]
     running = [False]
+    on_attandance = [True]
 
     # Tạo phần bên phải (Chia thông tin và nút)
     right_frame = tkinter.Frame(main_frame, height=canvas_height)
@@ -215,6 +229,11 @@ def create_attendance_live_tab(parent_window, width, height):
 
     # Tạo phần bên trên hiển thị thông tin nhân viên
     info_labels = create_info_frame(right_frame)
+
+    # Bắt đầu đọc dữ liệu vân tay và rfid từ ESP8266 để điểm danh
+    thread = threading.Thread(target=attandance_with_uart_data, args=(on_attandance, info_labels))
+    thread.daemon = True  # Luồng phụ, sẽ tự động đóng khi chương trình chính kết thúc
+    thread.start()
 
     def start_recognition(check_type):
         global recognizer, is_recognizer_initialized
@@ -243,8 +262,11 @@ def create_attendance_live_tab(parent_window, width, height):
         update_frame(canvas, photo_container, running, parent_window, check_type, info_labels)
 
     def stop_recognition():
-        """Dừng nhận diện khuôn mặt."""
+        """
+            Dừng nhận diện khuôn mặt
+        """
         running[0] = False
+
         # Hiển thị ảnh mặc định
         default_img = os.path.join(os.path.dirname(os.path.abspath(__file__)), "default_img", "istockphoto-661804394-1024x1024.jpg")
         img = cv2.imread(default_img)
