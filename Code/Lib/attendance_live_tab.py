@@ -6,6 +6,8 @@ import cv2
 import PIL.Image, PIL.ImageTk
 from threading import Thread
 from Lib import face_recognition, face_dataset, face_training, employee_management
+from Lib import employee_list, uart
+from Lib.uart_communication import jaccard_index, cosine_similarity
 
 def initialize_video_components(width, height):
     try:
@@ -131,24 +133,18 @@ def update_frame(canvas, photo_container, running, parent_window, check_type, in
     img = None
 
     if recognizer and video is not None:
-        # Lấy danh sách nhân viên từ cơ sở dữ liệu
-        employee_list = employee_management.EmployeeManagement.fetch_all_employees()
         # Nhận diện khuôn mặt từ camera
         img, employees = face_recognition.recognize_faces_live(video, recognizer, face_cascade, clahe, employee_list)
         # Điểm danh
         for employee in employees:
             # Thực hiện điểm danh dựa trên loại điểm danh (check-in hoặc check-out)
             if check_type == "check_in":
-                if employee.check_in():
-                    update_info_text(employee, info_labels, check_type="check_in")
-                else:
-                    update_info_text(employee, info_labels, check_type="check_in")
+                employee.check_in()
+                update_info_text(employee, info_labels, check_type="check_in")
 
             elif check_type == "check_out":
-                if employee.check_out():
-                    update_info_text(employee, info_labels, check_type="check_out")
-                else:
-                    update_info_text(employee, info_labels, check_type="check_out")
+                employee.check_out()
+                update_info_text(employee, info_labels, check_type="check_out")
 
 
     elif video is not None:
@@ -166,6 +162,32 @@ def update_frame(canvas, photo_container, running, parent_window, check_type, in
     # Sau 15ms thì chạy lại lệnh update_frame
     parent_window.after(15, lambda: update_frame(canvas, photo_container, running, parent_window, check_type, info_labels))
 
+def attandance_with_uart_data(on_attandance, info_labels):
+    """Chức năng điểm danh với vân tay và rfid"""
+    uart.send_command("GET_DATA")
+    time.sleep(0.3)
+    while on_attandance[0]:
+        try:
+            # Lấy dữ liệu
+            raw_response = uart.serial.readline().decode().strip()
+            if raw_response.startswith("ATTANDANCE|"):
+                # Nhận dữ liệu từ ESP8266
+                response = uart.read_response()
+                # Nếu là dữ liệu RFID và thuộc kiểu str
+                if response["type"] == "RFID" and isinstance(response["data"], str):
+                    for employee in employee_list:
+                        if employee.rfid_data == response["data"]:
+                            if employee.status_1 == '-':
+                                employee.check_in()
+                            elif employee.status_1 != '-' and employee.status_2 == '-':
+                                employee.check_out()
+                            update_info_text(employee, info_labels, check_type="check_in")
+                elif response["type"] == "FINGERPRINT" and isinstance(response["data"], bytes):
+                    for employee in employee_list:
+                        pass
+        except Exception as e:
+            print(f"Lỗi: {e}")
+
 def create_attendance_live_tab(parent_window, width, height):
     attendance_frame = tkinter.Frame(parent_window, bg='lightblue', width=width, height=height)
     attendance_frame.pack(fill=tkinter.BOTH, expand=True)
@@ -179,7 +201,7 @@ def create_attendance_live_tab(parent_window, width, height):
     # canvas_height = int(video.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
     # Tạo phần bên trái (video)
-    canvas_width = 520
+    canvas_width = 550
     canvas_height = 480
     canvas = create_video_frame(main_frame, canvas_width, canvas_height)
 
@@ -228,7 +250,7 @@ def create_attendance_live_tab(parent_window, width, height):
         img = cv2.imread(default_img)
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)  # Chuyển hệ màu
         img = PIL.Image.fromarray(img) # Chuyển đổi sang định dạng PIL
-        img = img.resize((canvas_width, canvas_height - 15), PIL.Image.Resampling.LANCZOS)  # Sử dụng LANCZOS để làm mịn ảnh
+        img = img.resize((520, 465), PIL.Image.Resampling.LANCZOS)  # Sử dụng LANCZOS để làm mịn ảnh
         img = PIL.ImageTk.PhotoImage(image=img) # Chuyển ảnh từ array sang tkinter image và vẽ lên canvas
         photo_container[0] = img  # Cập nhật ảnh mới vào container
         canvas.create_image(0, 0, image=img, anchor=tkinter.NW) # Vẽ ảnh vào canvas hiển thị lên màn hình

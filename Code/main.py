@@ -3,18 +3,23 @@ from tkinter.ttk import *
 from Lib.attendance_live_tab import create_attendance_live_tab
 from Lib.employee_management_tab import create_employee_management_tab
 from Lib.addanew_employee import create_add_employee_tab
-from Lib import uart
+from Lib import uart, employee_list, get_employee_list
+
+previous_tab = [""]
 
 def on_tab_change(event):
     # Kiểm tra tab hiện tại
     selected_tab = notebook.tab(notebook.select(), "text")
     if selected_tab == "Điểm danh":
+        get_employee_list(employee_list) # Cập nhật lại danh sách nhân viên
         stop_recognition()
+        previous_tab[0] = selected_tab  # Lưu tab trước đó
     elif selected_tab == "Quản lý nhân viên":
         update_employee_list()
         stop_recognition()
+        previous_tab[0] = selected_tab  # Lưu tab trước đó
     elif selected_tab == "Danh sách điểm danh":
-        pass
+        previous_tab[0] = selected_tab  # Lưu tab trước đó
     else:
         stop_recognition()
 
