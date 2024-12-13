@@ -103,7 +103,8 @@ class ODBEmployee:
             (self.employee_id, today)
         )
         record_time = cursor.fetchone()
-        if not record_time: # Chưa điểm danh lần nào trong ngày -> Thêm mới
+        # Nếu chưa hết giờ làm và chưa điểm danh lần nào trong ngày -> Thêm mới
+        if now < end_time and not record_time:
             if now <= start_time: # Nếu điểm danh sớm hoặc đúng giờ
                 self.status_1 = 'Đúng giờ'
             else: # Nếu muộn
@@ -150,7 +151,8 @@ class ODBEmployee:
             (self.employee_id, today)
         )
         record_time = cursor.fetchone()
-        if record_time:
+        # Nếu đã qua giờ bắt đầu làm và đã điểm danh vào -> Điểm danh ra
+        if now > start_time and record_time:
             if record_time[3] != '-' and record_time[4] == '-': # Đã điểm danh trong ngày -> Cập nhật
                 log_id, check_in_time, check_out_time, status_1, status_2 = record_time
                 if now >= end_time: # Nếu điểm danh khi đã tan làm

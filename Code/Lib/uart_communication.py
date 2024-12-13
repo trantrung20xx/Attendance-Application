@@ -47,9 +47,13 @@ class UARTCommunication:
                 elif decoded_response.startswith("FINGERTEMPLATE|"):
                     # Lấy mẫu vân tay
                     raw_template = self.serial.read(512) # Đọc 512 byte dữ liệu mẫu của vân tay
-                     # Sau khi nhận dữ liệu, làm sạch bộ đệm
-                    self.serial.reset_input_buffer()  # Xóa bộ đệm
-                    return {"type": "FINGERPRINT", "data": raw_template}
+                    if len(raw_template) == 512: # Kiểm tra độ dài dữ liệu
+                        # Sau khi nhận dữ liệu, làm sạch bộ đệm
+                        self.serial.reset_input_buffer()  # Xóa bộ đệm
+                        return {"type": "FINGERPRINT", "data": raw_template}
+                    else:
+                        print(f"Lỗi: Nhận được {len(raw_template)} byte, không đủ 512 byte.")
+                        return None
                 else:
                     return None
             except Exception as e:
@@ -76,7 +80,7 @@ def jaccard_index(data1, data2):
     else:
         print("Hai mẫu phải bằng nhau để so sánh")
 
-def cosine_similarity(data1, data2):
+def cosine_similarity(data1, data2, threshold=0.8):
     """
         Tính độ tương đồng Cosine giữa 2 mẫu
         Tính góc cosine giữa 2 vector
@@ -89,18 +93,20 @@ def cosine_similarity(data1, data2):
     vector2 = list(data2)
     # Tính độ tương đồng (khoảng cách của 2 mẫu dữ liệu)
     similarity = 1 - distance.cosine(vector1, vector2) # Tính góc cosine giữa 2 vector
-    return similarity
+    return similarity >= threshold, similarity
 
 ############################## Thuật toán Minutiae-based Matching ##################################
 def minutiae_based_matching(template1, template2, threshold=0.6):
     def extract_minutiae_details(template):
         minutiae = []
-        # Giải mã chi tiết từng điểm minutiae
-        for i in range(0, 512, 32):  # Mỗi minutiae 32 byte
-            x = (template[i] << 8) | template[i+1]
-            y = (template[i+2] << 8) | template[i+3]
-            angle = template[i+4]
-            minutiae_type = template[i+5]  # 0: đầu, 1: nhánh
+        # Mỗi minutiae chiếm 32 byte, tổng cộng có 512 byte (16 minutiae)
+        for i in range(0, len(template), 32):  # Lặp qua các bloc 32 byte
+            # Trích xuất thông tin minutiae từ mỗi bloc 32 byte
+            x = (template[i] << 8) | template[i+1]    # 2 byte đầu tiên cho tọa độ x
+            y = (template[i+2] << 8) | template[i+3]  # 2 byte tiếp theo cho tọa độ y
+            angle = template[i+4]                     # 1 byte tiếp theo cho góc
+            minutiae_type = template[i+5]             # 1 byte cho loại minutiae (0: đầu, 1: nhánh)
+
 
             minutiae.append({
                 'x': x,
@@ -117,14 +123,17 @@ def minutiae_based_matching(template1, template2, threshold=0.6):
 
         # Kiểm tra góc và loại điểm
         angle_diff = abs(point1['angle'] - point2['angle'])
+        if angle_diff > 180:  # Đảm bảo góc lệch không quá 180 độ
+            angle_diff = 360 - angle_diff
+
         type_match = point1['type'] == point2['type']
 
         # Điều kiện khớp: khoảng cách < 10, góc chênh lệch < 15, cùng loại
-        return (distance < 10 and
-                angle_diff < 15 and
+        return (distance < 30 and
+                angle_diff < 30 and
                 type_match)
 
-    # Trích xuất minutiae
+    # Trích xuất minutiae từ 2 mẫu
     minutiae1 = extract_minutiae_details(template1)
     minutiae2 = extract_minutiae_details(template2)
 
@@ -137,7 +146,7 @@ def minutiae_based_matching(template1, template2, threshold=0.6):
                 break
 
     # Tỉ lệ khớp
-    match_ratio = match_count / len(minutiae1)
+    match_ratio = match_count / max(len(minutiae1), 1)  # Tránh chia cho 0
 
     # So sánh với ngưỡng
     return match_ratio >= threshold, match_ratio
@@ -174,10 +183,10 @@ if __name__ == "__main__":
                 if len(listFingerTemplate[0]) == 512 and len(listFingerTemplate[1]) == 512:
                     print(f"{listFingerTemplate[0].hex()} - {listFingerTemplate[1].hex()}")
                     jaccard_score = jaccard_index(listFingerTemplate[0], listFingerTemplate[1])
-                    similarity = cosine_similarity(listFingerTemplate[0], listFingerTemplate[1])
+                    ret, similarity = cosine_similarity(listFingerTemplate[0], listFingerTemplate[1])
                     match_score = minutiae_based_matching(listFingerTemplate[0], listFingerTemplate[1], threshold=0.6)
                     print(f"Tỉ lệ trùng khớp với phương pháp jaccard: {jaccard_score}")
-                    print(f"Tỉ lệ trùng với phương pháp cosine similarity: {similarity}")
+                    print(f"Tỉ lệ trùng với phương pháp cosine similarity: {ret} - {similarity}")
                     print(f"Tỉ lệ trùng với thuật toán Minutiae-based Matching: {match_score}")
                     print(isinstance(listFingerTemplate[0], bytes))
 

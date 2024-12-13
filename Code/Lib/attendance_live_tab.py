@@ -1,12 +1,13 @@
 import os
+import cv2
 import tkinter
 from tkinter.ttk import *
 from tkinter import messagebox
-import cv2
+import traceback
 import PIL.Image, PIL.ImageTk
 import threading, time
 from Lib import face_recognition, face_dataset, face_training, employee_management
-from Lib import employee_list, uart, on_attandance
+from Lib import employee_list, on_attandance
 from Lib.uart_communication import jaccard_index, cosine_similarity, minutiae_based_matching
 
 def initialize_video_components(width, height):
@@ -102,18 +103,24 @@ def create_controls_frame(parent_frame, start_recognition, stop_recognition):
 
     return controls_frame
 
-def update_info_text(employee, info_labels, check_type):
+def update_info_text(info_labels, check_type, employee = None):
     """Cập nhật thông tin nhân viên vào các Label."""
     info_labels["Mã nhân viên"].config(text=employee.employee_id if employee else " Trống")
     info_labels["Tên nhân viên"].config(text=employee.name if employee else " Trống")
     info_labels["Phòng ban"].config(text=employee.department if employee else " Trống")
 
     if check_type == "check_in":
-        info_labels["Thời gian"].config(text=employee.check_in_time if employee else " Trống")
-        info_labels["Trạng thái"].config(text=employee.status_1 if employee else " Trống")
+        info_labels["Thời gian"].config(text=employee.check_in_time if employee else " -")
+        info_labels["Trạng thái"].config(text=employee.status_1 if employee else " -")
     elif check_type == "check_out":
-        info_labels["Thời gian"].config(text=employee.check_out_time if employee else " Trống")
-        info_labels["Trạng thái"].config(text=employee.status_2 if employee else " Trống")
+        info_labels["Thời gian"].config(text=employee.check_out_time if employee else " -")
+        info_labels["Trạng thái"].config(text=employee.status_2 if employee else " -")
+    elif check_type == "Unknown":
+        info_labels["Mã nhân viên"].config(text=" Không biết")
+        info_labels["Tên nhân viên"].config(text=" Không biết")
+        info_labels["Phòng ban"].config(text=" Không biết")
+        info_labels["Thời gian"].config(text=" -")
+        info_labels["Trạng thái"].config(text=" -")
 
 def update_frame(canvas, photo_container, running, parent_window, check_type, info_labels):
     """Hàm cập nhật khung hình video."""
@@ -140,11 +147,11 @@ def update_frame(canvas, photo_container, running, parent_window, check_type, in
             # Thực hiện điểm danh dựa trên loại điểm danh (check-in hoặc check-out)
             if check_type == "check_in":
                 employee.check_in()
-                update_info_text(employee, info_labels, check_type="check_in")
+                update_info_text(info_labels, check_type="check_in", employee=employee)
 
             elif check_type == "check_out":
                 employee.check_out()
-                update_info_text(employee, info_labels, check_type="check_out")
+                update_info_text(info_labels, check_type="check_out", employee=employee)
 
 
     elif video is not None:
@@ -162,43 +169,94 @@ def update_frame(canvas, photo_container, running, parent_window, check_type, in
     # Sau 15ms thì chạy lại lệnh update_frame
     parent_window.after(15, lambda: update_frame(canvas, photo_container, running, parent_window, check_type, info_labels))
 
-def attandance_with_uart_data(info_labels):
+def attandance_with_uart_data(uart, info_labels):
     """Chức năng điểm danh với vân tay và rfid"""
+    # Làm mới bộ đêm trước khi gửi dữ liệu
+    uart.serial.reset_output_buffer()
     uart.send_command("GET_DATA")
     time.sleep(0.3)
+    is_attended_employee = False # Biến xác nhận người điểm danh có trong công ty hay không
+
     while on_attandance[0]:
         try:
-            # Xóa bộ đệm trước khi nhận dữ liệu mới
-            uart.serial.reset_input_buffer()
-            # Lấy dữ liệu
-            raw_response = uart.serial.readline().decode().strip()
-            if raw_response.startswith("ATTANDANCE|"):
+            if uart.serial.in_waiting > 0:  # Chỉ xử lý khi có dữ liệu
                 # Nhận dữ liệu từ ESP8266
-                response = uart.read_response(onreset=False)
-                # Nếu là dữ liệu RFID và thuộc kiểu str
+                response = uart.read_response(onreset=True)
+
+                # Kiểm tra response có phải None không
+                if response is None:
+                    print("Không nhận được dữ liệu từ UART")
+                    time.sleep(0.1)
+                    continue
+
+                # Kiểm tra các trường dữ liệu (nếu là kiểu dictionary)
+                if not isinstance(response, dict):
+                    print(f"Dữ liệu không đúng định dạng: {response}")
+                    time.sleep(0.1)
+                    continue
+
+                # Kiểm tra các key có hợp lệ không
+                if "type" not in response or "data" not in response:
+                    print(f"Key không hợp lệ: {response}")
+                    time.sleep(0.1)
+                    continue
+
+                # Xử lý RFID
                 if response["type"] == "RFID" and isinstance(response["data"], str):
+                    is_attended_employee = False
                     for employee in employee_list:
-                        if employee.rfid_data == response["data"]:
-                            if employee.status_1 == '-':
-                                employee.check_in()
-                                update_info_text(employee, info_labels, check_type="check_in")
-                            elif employee.status_1 != '-' and employee.status_2 == '-':
-                                employee.check_out()
-                                update_info_text(employee, info_labels, check_type="check_out")
+                        # Nếu nhân viên có mã thẻ nhân viên -> thực hiện kiểm tra
+                        if employee.rfid_data:
+                            # Nếu id của thẻ trùng với id của thể đọc được -> điểm danh và cập nhật thông tin
+                            if employee.rfid_data == response["data"]:
+                                if employee.status_1 == '-':
+                                    employee.check_in()
+                                    update_info_text(info_labels, check_type="check_in", employee=employee)
+                                elif employee.status_1 != '-':
+                                    employee.check_out()
+                                    update_info_text(info_labels, check_type="check_out", employee=employee)
+                                is_attended_employee = True
+                                break
+                    # Nếu không tìm thấy thông tin trong cơ sở dữ liệu (không phải người của công ty)
+                    if not is_attended_employee:
+                        update_info_text(info_labels, check_type="Unknown")
+
+                # Xử lý vân tay
                 elif response["type"] == "FINGERPRINT" and isinstance(response["data"], bytes):
+                    is_attended_employee = False
                     for employee in employee_list:
-                        ret_fingerprint1, _ = minutiae_based_matching(employee.fingerprint_data_1, response["data"], threshold=0.615)
-                        ret_fingerprint2, _ = minutiae_based_matching(employee.fingerprint_data_2, response["data"], threshold=0.615)
+                        ret_fingerprint1 = False # Trạng thái khớp hay không khớp của vân tay đầu tiên
+                        ret_fingerprint2 = False # Trạng thái khớp hay không khớp của vân tay thứ hai
+                        match_score = 0 # Tỉ lệ khớp của hai mẫu (vân tay đầu tiên với vân tay đọc được)
+                        match_score2 = 0 # Tỉ lệ khớp của hai mẫu (vân tay thứ hai với vân tay đọc được)
+                        # Nếu nhân viên có vân tay đầu tiên
+                        if employee.fingerprint_data_1:
+                            ret_fingerprint1, match_score = cosine_similarity(employee.fingerprint_data_1, response["data"], threshold=0.862)
+                        # Nếu nhân viên có vân tay thứ hai
+                        if employee.fingerprint_data_2:
+                            ret_fingerprint2, match_score2 = cosine_similarity(employee.fingerprint_data_2, response["data"], threshold=0.862)
+                        # Nếu một trong 2 mẫu khớp với mẫu đọc được -> điểm danh và cập nhật thông tin
                         if ret_fingerprint1 or ret_fingerprint2:
+                            print("matched", " - ", match_score, " - ", match_score2)
                             if employee.status_1 == '-':
+                                print(employee.status_1)
                                 employee.check_in()
-                                update_info_text(employee, info_labels, check_type="check_in")
-                            elif employee.status_1!= '-' and employee.status_2 == '-':
+                                update_info_text(info_labels, check_type="check_in", employee=employee)
+                            elif employee.status_1!= '-':
                                 employee.check_out()
-                                update_info_text(employee, info_labels, check_type="check_out")
+                                update_info_text(info_labels, check_type="check_out", employee=employee)
+                            is_attended_employee = True
+                            break
+                    # Nếu không tìm thấy thông tin trong cơ sở dữ liệu (không phải người của công ty)
+                    if not is_attended_employee:
+                        update_info_text(info_labels, check_type="Unknown")
+
+                print(response)
         except Exception as e:
-            print(f"Lỗi: {e}")
-        time.sleep(1) # tránh chiếm quá nhiều tài nguyên CPU
+            print(f" Lỗi trong attandance_with_uart_data: {e}")
+            traceback.print_exc()  # In chi tiết stack trace
+
+        time.sleep(0.3) # tránh chiếm quá nhiều tài nguyên CPU
     print("ENDED")
 
 def create_attendance_live_tab(parent_window, width, height):
@@ -229,8 +287,8 @@ def create_attendance_live_tab(parent_window, width, height):
     # Tạo phần bên trên hiển thị thông tin nhân viên
     info_labels = create_info_frame(right_frame)
 
-    # Bắt đầu đọc dữ liệu vân tay và rfid từ ESP8266 để điểm danh
-    # thread = threading.Thread(target=attandance_with_uart_data, args=(info_labels,))
+    # # Bắt đầu đọc dữ liệu vân tay và rfid từ ESP8266 để điểm danh
+    # thread = threading.Thread(target=attandance_with_uart_data, args=(uart, info_labels,))
     # thread.daemon = True  # Luồng phụ, sẽ tự động đóng khi chương trình chính kết thúc
     # thread.start()
 
