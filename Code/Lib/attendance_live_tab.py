@@ -111,10 +111,10 @@ def update_info_text(info_labels, check_type, employee = None):
 
     if check_type == "check_in":
         info_labels["Thời gian"].config(text=employee.check_in_time if employee else " -")
-        info_labels["Trạng thái"].config(text=employee.status_1 if employee else " -")
+        info_labels["Trạng thái"].config(text="Vào " + employee.status_1.lower() if employee else " -")
     elif check_type == "check_out":
         info_labels["Thời gian"].config(text=employee.check_out_time if employee else " -")
-        info_labels["Trạng thái"].config(text=employee.status_2 if employee else " -")
+        info_labels["Trạng thái"].config(text="Ra " + employee.status_2.lower() if employee else " -")
     elif check_type == "Unknown":
         info_labels["Mã nhân viên"].config(text=" Không biết")
         info_labels["Tên nhân viên"].config(text=" Không biết")
@@ -143,15 +143,18 @@ def update_frame(canvas, photo_container, running, parent_window, check_type, in
         # Nhận diện khuôn mặt từ camera
         img, employees = face_recognition.recognize_faces_live(video, recognizer, face_cascade, clahe, employee_list)
         # Điểm danh
-        for employee in employees:
-            # Thực hiện điểm danh dựa trên loại điểm danh (check-in hoặc check-out)
-            if check_type == "check_in":
-                employee.check_in()
-                update_info_text(info_labels, check_type="check_in", employee=employee)
+        if employees:
+            for employee in employees:
+                # Thực hiện điểm danh dựa trên loại điểm danh (check-in hoặc check-out)
+                if check_type == "check_in":
+                    employee.check_in()
+                    update_info_text(info_labels, check_type="check_in", employee=employee)
 
-            elif check_type == "check_out":
-                employee.check_out()
-                update_info_text(info_labels, check_type="check_out", employee=employee)
+                elif check_type == "check_out":
+                    employee.check_out()
+                    update_info_text(info_labels, check_type="check_out", employee=employee)
+        else:
+            update_info_text(info_labels, check_type="Unknown")
 
 
     elif video is not None:
@@ -181,24 +184,21 @@ def attandance_with_uart_data(uart, info_labels):
         try:
             if uart.serial.in_waiting > 0:  # Chỉ xử lý khi có dữ liệu
                 # Nhận dữ liệu từ ESP8266
-                response = uart.read_response(onreset=True)
+                response = uart.read_response(onreset=False)
 
                 # Kiểm tra response có phải None không
                 if response is None:
                     print("Không nhận được dữ liệu từ UART")
-                    time.sleep(0.1)
                     continue
 
                 # Kiểm tra các trường dữ liệu (nếu là kiểu dictionary)
                 if not isinstance(response, dict):
                     print(f"Dữ liệu không đúng định dạng: {response}")
-                    time.sleep(0.1)
                     continue
 
                 # Kiểm tra các key có hợp lệ không
                 if "type" not in response or "data" not in response:
                     print(f"Key không hợp lệ: {response}")
-                    time.sleep(0.1)
                     continue
 
                 # Xử lý RFID
@@ -251,7 +251,6 @@ def attandance_with_uart_data(uart, info_labels):
                     if not is_attended_employee:
                         update_info_text(info_labels, check_type="Unknown")
 
-                print(response)
         except Exception as e:
             print(f" Lỗi trong attandance_with_uart_data: {e}")
             traceback.print_exc()  # In chi tiết stack trace
