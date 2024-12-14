@@ -174,6 +174,7 @@ def update_frame(canvas, photo_container, running, parent_window, check_type, in
 
 def attandance_with_uart_data(uart, info_labels):
     """Chức năng điểm danh với vân tay và rfid"""
+    print("BEGIN")
     # Làm mới bộ đêm trước khi gửi dữ liệu
     uart.serial.reset_output_buffer()
     uart.send_command("GET_DATA")
@@ -231,15 +232,15 @@ def attandance_with_uart_data(uart, info_labels):
                         match_score2 = 0 # Tỉ lệ khớp của hai mẫu (vân tay thứ hai với vân tay đọc được)
                         # Nếu nhân viên có vân tay đầu tiên
                         if employee.fingerprint_data_1:
-                            ret_fingerprint1, match_score = hamming_distance(employee.fingerprint_data_1, response["data"], threshold=91.2)
+                            ret_fingerprint1, match_score = hamming_distance(employee.fingerprint_data_1, response["data"], threshold=90)
                         # Nếu nhân viên có vân tay thứ hai
                         if employee.fingerprint_data_2:
-                            ret_fingerprint2, match_score2 = hamming_distance(employee.fingerprint_data_2, response["data"], threshold=91.2)
+                            ret_fingerprint2, match_score2 = hamming_distance(employee.fingerprint_data_2, response["data"], threshold=90)
                         # Nếu một trong 2 mẫu khớp với mẫu đọc được -> điểm danh và cập nhật thông tin
                         if ret_fingerprint1 or ret_fingerprint2:
                             print(employee.name, " - ", match_score, " - ", match_score2)
                             # Chỉ lấy nhân viên có tỉ lệ mẫu khớp với mẫu đọc được cao nhất
-                            if employee_best_confidence[1] < max(match_score, match_score2):
+                            if employee_best_confidence[1] < max(match_score, match_score2): # Nếu độ tin cậy cao hơn ngưỡng và tốt hơn mẫu trước, cập nhật lại nhân viên
                                 employee_best_confidence = (employee, max(match_score, match_score2))
                     # Nếu có thông tin của nhân viên trong cơ cở dữ liệu khớp với mẫu -> điểm danh
                     if employee_best_confidence[0] is not None:
