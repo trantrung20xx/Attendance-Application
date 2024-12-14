@@ -8,7 +8,7 @@ import PIL.Image, PIL.ImageTk
 import threading, time
 from Lib import face_recognition, face_dataset, face_training, employee_management
 from Lib import employee_list, on_attandance
-from Lib.uart_communication import jaccard_index, cosine_similarity, minutiae_based_matching
+from Lib.uart_communication import hamming_distance
 
 def initialize_video_components(width, height):
     try:
@@ -223,7 +223,7 @@ def attandance_with_uart_data(uart, info_labels):
 
                 # Xử lý vân tay
                 elif response["type"] == "FINGERPRINT" and isinstance(response["data"], bytes):
-                    is_attended_employee = False
+                    employee_best_confidence = (None, 0) # Lưu nhân viên có tỉ lệ trùng khớp cao nhất
                     for employee in employee_list:
                         ret_fingerprint1 = False # Trạng thái khớp hay không khớp của vân tay đầu tiên
                         ret_fingerprint2 = False # Trạng thái khớp hay không khớp của vân tay thứ hai
@@ -231,24 +231,26 @@ def attandance_with_uart_data(uart, info_labels):
                         match_score2 = 0 # Tỉ lệ khớp của hai mẫu (vân tay thứ hai với vân tay đọc được)
                         # Nếu nhân viên có vân tay đầu tiên
                         if employee.fingerprint_data_1:
-                            ret_fingerprint1, match_score = cosine_similarity(employee.fingerprint_data_1, response["data"], threshold=0.862)
+                            ret_fingerprint1, match_score = hamming_distance(employee.fingerprint_data_1, response["data"], threshold=91.2)
                         # Nếu nhân viên có vân tay thứ hai
                         if employee.fingerprint_data_2:
-                            ret_fingerprint2, match_score2 = cosine_similarity(employee.fingerprint_data_2, response["data"], threshold=0.862)
+                            ret_fingerprint2, match_score2 = hamming_distance(employee.fingerprint_data_2, response["data"], threshold=91.2)
                         # Nếu một trong 2 mẫu khớp với mẫu đọc được -> điểm danh và cập nhật thông tin
                         if ret_fingerprint1 or ret_fingerprint2:
-                            print("matched", " - ", match_score, " - ", match_score2)
-                            if employee.status_1 == '-':
-                                print(employee.status_1)
-                                employee.check_in()
-                                update_info_text(info_labels, check_type="check_in", employee=employee)
-                            elif employee.status_1!= '-':
-                                employee.check_out()
-                                update_info_text(info_labels, check_type="check_out", employee=employee)
-                            is_attended_employee = True
-                            break
+                            print(employee.name, " - ", match_score, " - ", match_score2)
+                            # Chỉ lấy nhân viên có tỉ lệ mẫu khớp với mẫu đọc được cao nhất
+                            if employee_best_confidence[1] < max(match_score, match_score2):
+                                employee_best_confidence = (employee, max(match_score, match_score2))
+                    # Nếu có thông tin của nhân viên trong cơ cở dữ liệu khớp với mẫu -> điểm danh
+                    if employee_best_confidence[0] is not None:
+                        if employee_best_confidence[0].status_1 == '-':
+                            employee_best_confidence[0].check_in()
+                            update_info_text(info_labels, check_type="check_in", employee=employee_best_confidence[0])
+                        elif employee_best_confidence[0].status_1!= '-':
+                            employee_best_confidence[0].check_out()
+                            update_info_text(info_labels, check_type="check_out", employee=employee_best_confidence[0])
                     # Nếu không tìm thấy thông tin trong cơ sở dữ liệu (không phải người của công ty)
-                    if not is_attended_employee:
+                    else:
                         update_info_text(info_labels, check_type="Unknown")
 
         except Exception as e:

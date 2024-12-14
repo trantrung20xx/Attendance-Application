@@ -1,87 +1,45 @@
 import numpy as np
 import math
-
-def minutiae_matching(template1, template2, tolerance=0.6):
-    def extract_minutiae(template):
-        minutiae = []
-        for i in range(0, len(template), 32):
-            x = (template[i] << 8) | template[i+1]
-            y = (template[i+2] << 8) | template[i+3]
-            angle = template[i+4]
-            type_code = template[i+5]
-
-            minutiae.append({
-                'x': x,
-                'y': y,
-                'angle': angle,
-                'type': type_code
-            })
-        return minutiae
-
-    def calculate_distance(point1, point2):
-        return math.sqrt((point1['x'] - point2['x'])**2 +
-                         (point1['y'] - point2['y'])**2)
-
-    def calculate_angle_difference(angle1, angle2):
-        diff = abs(angle1 - angle2)
-        return min(diff, 360 - diff)
-
-    # Trích xuất điểm đặc trưng
-    minutiae1 = extract_minutiae(template1)
-    minutiae2 = extract_minutiae(template2)
-
-    # Số điểm khớp
-    matched_points = 0
-    total_points = min(len(minutiae1), len(minutiae2))
-
-    for point1 in minutiae1:
-        for point2 in minutiae2:
-            # Kiểm tra khoảng cách
-            distance = calculate_distance(point1, point2)
-
-            # Kiểm tra góc
-            angle_diff = calculate_angle_difference(point1['angle'], point2['angle'])
-
-            # Kiểm tra loại điểm
-            type_match = point1['type'] == point2['type']
-
-            # Điều kiện khớp
-            if (distance < 30 and  # Khoảng cách pixel
-                angle_diff < 30 and  # Chênh lệch góc
-                type_match):
-                matched_points += 1
-                break
-
-    # Tính tỷ lệ khớp
-    match_ratio = matched_points / total_points
-
-    # Đánh giá kết quả
-    is_match = match_ratio >= tolerance
-
-    return is_match, match_ratio
-
-# Sử dụng
-def fingerprint_match(template1, template2):
-    is_match, match_score = minutiae_matching(template1, template2)
-
-    if is_match:
-        print(f"Vân tay khớp! Độ chính xác: {match_score * 100:.2f}%")
-        return True
-    else:
-        print(f"Vân tay không khớp. Tỷ lệ khớp: {match_score * 100:.2f}%")
-        return False
-
-
+import cv2
+import random
 
 a = b'\x03\x03c\x17\x00\x01 \x01\x81\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x0e\x00\x00\x00{\x00\x00\x00\x00\x033\xff\xff\xff\xef\xff\xbb\xbb\xae\xba\xae\xaa\xae\xaa\xa6fYUEU\x14E\x10DDD@\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x10\xa8\xef\x01\xff\xff\xff\xff\x02\x00\x82m\x1c ^E\xa6 \x1e \xa7\x9d\xbe)/\xe0\xfe&\xb9\xce\xbeN\t\x1e\x9fr\x8aa\x9fw\x11\xe0\xff@\x1b\x1e\xdf\x14"\x1f\xbf\x0e&[_d/`\xff\x1c\xb0\x8c\x1fH0\xcb\x7f51\xe1\xff\x187"\x9f2\x9e\xc9\xbc)$\n\x1c-!^:U\xa2\xe3zV\xa0\x8b{6\x98^\x18:\x16\xc8y\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00%\x9c\xef\x01\xff\xff\xff\xff\x02\x00\x82\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x84\xef\x01\xff\xff\xff\xff\x02\x00\x82\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
 
 
 b = b'\x03\x03P\x15\x00\x01 \x01{\x11\x00\xff\x00\x00\x00\x00\x00\xff\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x03\x00\x06\x00m\x00\x00\x0030\xcc\xcc\xcc\xcc\xcf<\xf3\xfe\xee\xea\xaa\xba\xa6\xa9\xa6fffUUUTD\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x10\x8b\xef\x01\xff\xff\xff\xff\x02\x00\x82/\x96\xdb>\x10\x9b\xe2\x1e8\x1c \x1e\x1b$[\xdeV($\xbe\x13.\x18>R\xaff\x9e$\xb3\xd6\xdeS9\xa9>?\x1e\xe2\x9f5&\x95\xbf<)\xe7\x1f\x0f\xaa\x19\xff[5\xd3<\x1b\x96B\xb8\x1f\x9a\x02\xd8^1%\x98\x1c\x19\x03\xb9*\x1b\xd8\xf9\\.Q\xd9,\x9b\xd57\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00!\x91\xef\x01\xff\xff\xff\xff\x02\x00\x82\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x84\xef\x01\xff\xff\xff\xff\x02\x00\x82\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
 
-# Giả sử template1 và template2 là mảng 512 byte từ cảm biến
-fingerprint_match(a, b)
 
-a = "0x0303630E000120018000000000000000000000000000000000000000000000000000000000000000000000000000000005000600650000003000C00333FFFFFEEEFFEBAAAA69A66666695955559444000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000E7AEF01FFFFFFFF0200822591A13E191422BE471A905E1A1C529E4726A71E4A3867BE2D92A2BF2D1AA57F549EE53F23A367DF28A7295F362F131F3A1B511B3F1A65380000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000013C6EF01FFFFFFFF02008200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000084EF01FFFFFFFF02008200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-b = "0x0303542100012001820000000000000000000000000000000000000000000000000000000000000000000000000000000D0000007B0000000000CFFFFFEFEFBEEEFBBEEBBAEBAAA6AA69955555555511111111004000000000000000000000000000000000000000000000000000000000000000000000000000000000000000119BEF01FFFFFFFF0200824F04073E710DA77E3511DBDE319E593E10219BFE1BA2825E5524551E233417FE15B458DE4D0C5D5F4B9199DF0C95463F6D19EA1F47266B9F32AA57DF3BB9D4DF40AD6CBD3C30171D4617D7DA3F18C01A2BA5189A45B415DA439B581B3024011B45B6009B3788C998388AE018378CDDD9578B9B0E6033BCEF01FFFFFFFF0200826D0710C70000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001CFEF01FFFFFFFF02008200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+fingerprint1 = np.frombuffer(a, dtype=np.uint8)
+fingerprint2 = np.frombuffer(b, dtype=np.uint8)
 
-print(len(a), " ", len(b), " ", a == b)
+fingerprint1.reshape(16, 32)
+fingerprint2.reshape(16, 32)
+
+
+print(cv2.matchTemplate(fingerprint1, fingerprint2, cv2.TM_CCOEFF_NORMED))
+
+
+# Hàm tính Hamming Distance
+def hamming_distance(fingerprint1, fingerprint2):
+    if len(fingerprint1) != len(fingerprint2):
+        raise ValueError("Fingerprint templates must have the same length")
+    return sum(bin(byte1 ^ byte2).count('1') for byte1, byte2 in zip(fingerprint1, fingerprint2))
+
+
+# Tính khoảng cách Hamming
+distance = hamming_distance(fingerprint1, fingerprint2)
+print(f"Hamming Distance: {distance}")
+
+# Đặt ngưỡng so khớp
+threshold = 50  # Thử nghiệm giá trị phù hợp
+if distance <= threshold:
+    print("Fingerprints match!")
+else:
+    print("Fingerprints do not match.")
+
+tpl = (None, 0)
+
+for i, j in enumerate(range(0, 100)):
+    tpl = (random.randint(0, 300) - i, max(tpl[1], max(j, random.randint(0, 300))))
+print(tpl[0])
+print(tpl[1])

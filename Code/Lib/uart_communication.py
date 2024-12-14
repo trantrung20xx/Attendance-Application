@@ -65,6 +65,19 @@ class UARTCommunication:
         if self.serial.is_open:
             self.serial.close()
 
+def hamming_distance(fingerprint1, fingerprint2, threshold=90):
+    if len(fingerprint1) != len(fingerprint2):
+        raise ValueError("Fingerprint templates must have the same length")
+
+    t1 = np.unpackbits(np.frombuffer(fingerprint1, dtype=np.uint8))
+    t2 = np.unpackbits(np.frombuffer(fingerprint2, dtype=np.uint8))
+
+    max_bits = len(fingerprint1) * 8
+    hamming_dist = sum(t1 != t2)
+
+    confidence = max(0, 100 * (1 - hamming_dist / max_bits))
+    return confidence >= threshold, confidence
+
 def jaccard_index(data1, data2):
     """
         Tính chỉ số jaccard giữa 2 mẫu nhị phân
@@ -94,6 +107,15 @@ def cosine_similarity(data1, data2, threshold=0.8):
     # Tính độ tương đồng (khoảng cách của 2 mẫu dữ liệu)
     similarity = 1 - distance.cosine(vector1, vector2) # Tính góc cosine giữa 2 vector
     return similarity >= threshold, similarity
+
+def compare_templates(template1, template2):
+        """
+        So sánh hai mẫu vân tay và trả về mức độ tương đồng (%).
+        Dựa trên thuật toán XOR để đo sự khác biệt.
+        """
+        diff = np.sum(template1 != template2)  # Đếm số byte khác nhau
+        similarity = (1 - diff / len(template1)) * 100  # Tỷ lệ tương đồng (%)
+        return similarity
 
 ############################## Thuật toán Minutiae-based Matching ##################################
 def minutiae_based_matching(template1, template2, threshold=0.6):
@@ -185,9 +207,17 @@ if __name__ == "__main__":
                     jaccard_score = jaccard_index(listFingerTemplate[0], listFingerTemplate[1])
                     ret, similarity = cosine_similarity(listFingerTemplate[0], listFingerTemplate[1])
                     match_score = minutiae_based_matching(listFingerTemplate[0], listFingerTemplate[1], threshold=0.6)
+                    distance_ = hamming_distance(listFingerTemplate[0], listFingerTemplate[1], threshold=91)
+                    similarity_two = cv2.matchTemplate(np.frombuffer(listFingerTemplate[0], dtype=np.uint8), np.frombuffer(listFingerTemplate[1], dtype=np.uint8), cv2.TM_CCOEFF_NORMED)
+                    distance__ = distance.euclidean(np.frombuffer(listFingerTemplate[0], dtype=np.uint8), np.frombuffer(listFingerTemplate[1], dtype=np.uint8))
+                    distance___ = compare_templates(np.frombuffer(listFingerTemplate[0], dtype=np.uint8), np.frombuffer(listFingerTemplate[1], dtype=np.uint8))
                     print(f"Tỉ lệ trùng khớp với phương pháp jaccard: {jaccard_score}")
                     print(f"Tỉ lệ trùng với phương pháp cosine similarity: {ret} - {similarity}")
                     print(f"Tỉ lệ trùng với thuật toán Minutiae-based Matching: {match_score}")
+                    print(f"Tỉ lệ trùng với thuật toán hamming distance: {distance_}")
+                    print(f"Tỉ lệ trùng với cv2.matchTemplate: {similarity_two}")
+                    print(f"Tỉ lệ trùng với euclid: {distance__}")
+                    print(f"Tỉ lệ tương đồng: {distance___:.2f}%")
                     print(isinstance(listFingerTemplate[0], bytes))
 
         finally:
