@@ -33,7 +33,7 @@ CREATE TABLE Configurations (
 INSERT INTO Configurations (ConfigKey, ConfigValueInt) VALUES ('Config1', 1)
 UPDATE Configurations SET ConfigValueInt = 7 WHERE ConfigKey = 'Config1'
 DELETE FROM Employees WHERE EmployeeID = 'EMP00003'
-DELETE FROM AttendanceLogs WHERE EmployeeID = 'EMP00001'
+DELETE FROM AttendanceLogs WHERE EmployeeID = 'EMP00001' AND LogID = 11
 
 SELECT * FROM Employees
 SELECT * FROM AttendanceLogs

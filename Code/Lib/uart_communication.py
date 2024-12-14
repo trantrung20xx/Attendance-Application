@@ -173,6 +173,31 @@ def minutiae_based_matching(template1, template2, threshold=0.6):
     # So sánh với ngưỡng
     return match_ratio >= threshold, match_ratio
 
+def cross_correlation(template1, template2, threshold=50):
+    """
+    Tính toán Cross-Correlation giữa hai mẫu vân tay
+
+    :param template1: Mẫu vân tay thứ nhất (dạng bytes hoặc list)
+    :param template2: Mẫu vân tay thứ hai (dạng bytes hoặc list)
+    """
+    # Chuyển dữ liệu sang numpy array
+    t1 = np.frombuffer(template1, dtype=np.uint8)
+    t2 = np.frombuffer(template2, dtype=np.uint8)
+
+    # Tính toán giá trị Cross-Correlation
+    mean_t1 = np.mean(t1)
+    mean_t2 = np.mean(t2)
+    numerator = np.sum((t1 - mean_t1) * (t2 - mean_t2))
+    denominator = np.sqrt(np.sum((t1 - mean_t1) ** 2) * np.sum((t2 - mean_t2) ** 2))
+
+    # cross_corr_value: Giá trị Cross-Correlation (-1 đến 1)
+    cross_corr_value = numerator / denominator if denominator != 0 else 0
+
+    # Tính toán độ tin cậy (0-100)
+    confidence = max(0, min(100, (cross_corr_value + 1) * 50))
+
+    return confidence >= threshold, confidence
+
 ############################## End thuật toán Minutiae-based Matching ##################################
 
 if __name__ == "__main__":
@@ -211,6 +236,7 @@ if __name__ == "__main__":
                     similarity_two = cv2.matchTemplate(np.frombuffer(listFingerTemplate[0], dtype=np.uint8), np.frombuffer(listFingerTemplate[1], dtype=np.uint8), cv2.TM_CCOEFF_NORMED)
                     distance__ = distance.euclidean(np.frombuffer(listFingerTemplate[0], dtype=np.uint8), np.frombuffer(listFingerTemplate[1], dtype=np.uint8))
                     distance___ = compare_templates(np.frombuffer(listFingerTemplate[0], dtype=np.uint8), np.frombuffer(listFingerTemplate[1], dtype=np.uint8))
+                    confidence = cross_correlation(listFingerTemplate[0], listFingerTemplate[1], threshold=91)
                     print(f"Tỉ lệ trùng khớp với phương pháp jaccard: {jaccard_score}")
                     print(f"Tỉ lệ trùng với phương pháp cosine similarity: {ret} - {similarity}")
                     print(f"Tỉ lệ trùng với thuật toán Minutiae-based Matching: {match_score}")
@@ -218,6 +244,7 @@ if __name__ == "__main__":
                     print(f"Tỉ lệ trùng với cv2.matchTemplate: {similarity_two}")
                     print(f"Tỉ lệ trùng với euclid: {distance__}")
                     print(f"Tỉ lệ tương đồng: {distance___:.2f}%")
+                    print(f"Tỉ lệ tương đồng với thuật toán Cross-Correlation: {confidence}%")
                     print(isinstance(listFingerTemplate[0], bytes))
 
         finally:
