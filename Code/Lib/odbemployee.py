@@ -48,6 +48,25 @@ class ODBEmployee:
         ODBEmployee._id_counter += 1 # Tăng bộ đếm để thực hiện cho lần thêm nhân viên sau
         return employee_id, face_id
 
+    @staticmethod
+    def get_list_fingerprintID():
+        cursor.execute("SELECT FingerprintData1, FingerprintData2 FROM Employees")
+        fingerprint_id_pairs = cursor.fetchall()
+        fingerprint_id_set = set()
+        for fingerprint_id_pair in fingerprint_id_pairs:
+            for fingerprint_id in fingerprint_id_pair:
+                if fingerprint_id is not None:
+                    fingerprint_id_set.add(fingerprint_id)
+        return fingerprint_id_set
+
+    @staticmethod
+    def get_fingerprint_id(begin = 1):
+        fingerprint_id_set = ODBEmployee.get_list_fingerprintID()
+        print(fingerprint_id_set)
+        for fingerprint_id in range(begin, 128):
+            if bytes([fingerprint_id]) not in fingerprint_id_set:
+                return bytes([fingerprint_id])
+
     def __init__(self, employee_id = None, name="unknown", face_id = None, fingerprint_data_1=None, fingerprint_data_2=None, rfid_data=None, department="unknown"):
         """
         Khởi tạo một nhân viên mới với mã tự động tăng
@@ -127,8 +146,9 @@ class ODBEmployee:
             odb.commit()
             return True # Cập nhật thành công
         else:
-            self.check_in_time = record_time[1].strftime("%Y-%m-%d - %H:%M:%S")
-            self.status_1 = record_time[3]
+            if record_time:
+                self.check_in_time = record_time[1].strftime("%Y-%m-%d - %H:%M:%S")
+                self.status_1 = record_time[3]
         return False # Cập nhật không thành công
 
     def check_out(self):

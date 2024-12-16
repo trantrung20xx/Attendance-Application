@@ -6,7 +6,7 @@ from Lib.employee_management import EmployeeManagement
 from Lib import face_training
 import threading
 from Lib.employee_edit_window import EmployeeEditWindow
-from Lib import attendance_live_tab
+from Lib import attendance_live_tab, unlinked_fingerprint, unlinked_fingerprint_list
 
 # from employee_management import EmployeeManagement
 
@@ -94,7 +94,7 @@ def create_employee_management_tab(notebook, width, height):
         column = tree.identify_column(event.x) # Xác định cột được nhấn
         selected_employee = tree.item(selected_item, "values")
         employee_id = selected_employee[1] # Lấy id của nhân viên được chọn
-        name = selected_employee[2].strip() # Lấy tên của nhân viên
+        # name = selected_employee[2].strip() # Lấy tên của nhân viên
 
         if column == "#5": # Cột Tùy chọn
             # action = event.widget.item(selected_item)["values"][-1] <=> selected_employee[-1]
@@ -102,7 +102,7 @@ def create_employee_management_tab(notebook, width, height):
             if 800 <= x_offset <= 873: # Nhấn vào Chỉnh sửa
                 open_edit_window(employee_id)
             elif 884 <= x_offset <= 912: # Nhấn vào Xóa
-                delete_employee(employee_id, name)
+                delete_employee(employee_id)
 
     # Nút chỉnh sửa thông tin nhân viên
     def open_edit_window(employee_id):
@@ -114,11 +114,12 @@ def create_employee_management_tab(notebook, width, height):
         EmployeeEditWindow(employee_management_tab, employee, update_employee_list)
 
     # Hàm xóa nhân viên
-    def delete_employee(employee_id, name):
+    def delete_employee(employee_id):
+        employee = EmployeeManagement.find_employee(employee_id)
         # Hiện thông báo xác nhận xóa nhân viên
         confirmation = tk.messagebox.askyesno(
             title="Xác nhận xóa",
-            message=f"Nhân viên:  {name}\nMã nhân viên:  {employee_id}\n\nBạn có chắc muốn xóa nhân viên này không?"
+            message=f"Nhân viên:  {employee.name}\nMã nhân viên:  {employee.employee_id}\n\nBạn có chắc muốn xóa nhân viên này không?"
         )
         if confirmation:
             # Xóa thư mục chứa ảnh của nhân viên cần xóa
@@ -131,6 +132,11 @@ def create_employee_management_tab(notebook, width, height):
                         break
 
             EmployeeManagement.delete_employee(employee_id) # Thực hiện xóa từ cơ sở dữ liệu
+            unlinked_fingerprint[0] = True
+            if employee.fingerprint_data_1:
+                unlinked_fingerprint_list.add(employee.fingerprint_data_1)
+            if employee.fingerprint_data_2:
+                unlinked_fingerprint_list.add(employee.fingerprint_data_2)
 
             # Training lại mô hình sau khi xóa nhân viên
             threading.Thread(target=lambda: face_training.train_and_save_model(face_training.base_path, face_training.yml_file_path), daemon=True).start()

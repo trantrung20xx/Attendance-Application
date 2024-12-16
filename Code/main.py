@@ -1,20 +1,34 @@
 import tkinter
 from tkinter.ttk import *
 import threading
+import time
 from Lib.attendance_live_tab import create_attendance_live_tab, attandance_with_uart_data
 from Lib.employee_management_tab import create_employee_management_tab
 from Lib.addanew_employee import create_add_employee_tab
 from Lib.attendance_list_tab import create_attendance_list_tab, refresh_attendance_table
-from Lib import uart, employee_list, get_employee_list, on_attandance
+from Lib import uart, employee_list, get_employee_list, on_attandance, odbemployee, unlinked_fingerprint, unlinked_fingerprint_list
 
 uart_thread = [None]  # Quản lý luồng UART
 
+# Xóa những ID vân tay mà không được liên kết với bất kì nhân viên nào
+def deleteOrphanedFingerprint():
+    for fingerprint_id in list(unlinked_fingerprint_list):
+        uart.send_command("DELETE_FINGERPRINT")
+        uart.send_command(fingerprint_id, endline=False, number=True)
+        response = uart.serial.readline().decode("utf-8").strip()
+        print(response)
+        if response != "FINGERPRINT_OK":
+            break
+        unlinked_fingerprint_list.discard(fingerprint_id)
+    unlinked_fingerprint[0] = False
 def on_tab_change(event):
     # Kiểm tra tab hiện tại
     selected_tab = notebook.tab(notebook.select(), "text")
     if selected_tab == "Điểm danh":
         get_employee_list(employee_list) # Cập nhật lại danh sách nhân viên
         stop_recognition() # Tắt điểm danh khuôn mặt
+        if unlinked_fingerprint[0]: # Nếu thêm id vân tay nhưng chưa liên kết id đó với nhân viên nào
+            deleteOrphanedFingerprint() # Xóa các id vân tay không được liên kết với bất kì nhân viên nào
         on_attandance[0] = True # Bật lại chức năng điểm danh với vân tay và rfid
         if not uart_thread[0] or not uart_thread[0].is_alive():
             uart_thread[0] = threading.Thread(target=attandance_with_uart_data, args=(uart, info_labels,))
@@ -28,6 +42,8 @@ def on_tab_change(event):
     elif selected_tab == "Danh sách điểm danh":
         refresh_attendance_table()  # Làm mới danh sách điểm danh
         stop_recognition() # Tắt điểm danh khuôn mặt
+        if unlinked_fingerprint[0]: # Nếu thêm id vân tay nhưng chưa liên kết id đó với nhân viên nào
+            deleteOrphanedFingerprint() # Xóa các id vân tay không được liên kết với bất kì nhân viên nào
         on_attandance[0] = True # Bật lại chức năng điểm danh với vân tay và rfid
         if not uart_thread[0] or not uart_thread[0].is_alive():
             uart_thread[0] = threading.Thread(target=attandance_with_uart_data, args=(uart, info_labels,))

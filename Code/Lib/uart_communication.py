@@ -4,19 +4,31 @@ import cv2
 import numpy as np
 import math
 from scipy.spatial import distance
+import ctypes
+import os
 
 class UARTCommunication:
     def __init__(self, port, baudrate=115200, timeout=None):
         self.serial = serial.Serial(port, baudrate, timeout=timeout)
         time.sleep(2)  # Đợi ESP8266 khởi động giao tiếp
 
-    def send_command(self, command):
+    def send_command(self, command, endline = True, number = False):
         """Gửi lệnh đến ESP8266"""
         if self.serial.is_open:
-            command_with_terminator = f"{command}\n"
-            self.serial.write(command_with_terminator.encode())
-
+            command_with_terminator = f"{command}\n" if endline else command
+            if not number:
+                self.serial.write(command_with_terminator.encode())
+            else:
+                data = bytearray()
+                if isinstance(command, bytes): # Nếu là kiểu bytes
+                    data.append(int(command[0]))
+                elif isinstance(command, int): # Nếu là kiểu int
+                    data.append(command_with_terminator)
+                else:
+                    raise ValueError("Command must be either bytes or int.")
+                self.serial.write(bytes(data))
     def read_response(self, onreset = True):
+        from Lib import message_uart
         """Đọc phản hồi từ ESP8266"""
         if self.serial.is_open:
             try:
@@ -25,6 +37,9 @@ class UARTCommunication:
                     self.serial.reset_input_buffer()  # Xóa bộ đệm
                 # Lấy dữ liệu dòng đầu tiên
                 raw_response = self.serial.readline()  # Đọc dữ liệu gốc (dạng bytes)
+                if raw_response == b'\n':
+                    message_uart[0] = None
+                    return None
 
                 try:
                     # Giải mã dữ liệu thành utf-8
@@ -44,17 +59,22 @@ class UARTCommunication:
                     line = decoded_response.split('|')
                     if len(line) == 2 and len(line[1]) == 8:
                         return {"type": "RFID", "data": line[1]}
-                elif decoded_response.startswith("FINGERTEMPLATE|"):
+                elif decoded_response.startswith("FINGERPRINT|"):
                     # Lấy mẫu vân tay
-                    raw_template = self.serial.read(512) # Đọc 512 byte dữ liệu mẫu của vân tay
-                    if len(raw_template) == 512: # Kiểm tra độ dài dữ liệu
+                    # raw_template = self.serial.read(512) # Đọc 512 byte dữ liệu mẫu của vân tay
+                    # if len(raw_template) == 512: # Kiểm tra độ dài dữ liệu
+                    fingerprint_id = self.serial.read(1) # Đọc 1 byte dữ liệu ID của vân tay
+                    print("ID: ", fingerprint_id)
+                    if len(fingerprint_id) == 1: # Kiểm tra độ dài dữ liệu
                         # Sau khi nhận dữ liệu, làm sạch bộ đệm
                         self.serial.reset_input_buffer()  # Xóa bộ đệm
-                        return {"type": "FINGERPRINT", "data": raw_template}
+                        return {"type": "FINGERPRINT", "data": fingerprint_id}
                     else:
-                        print(f"Lỗi: Nhận được {len(raw_template)} byte, không đủ 512 byte.")
+                        # print(f"Lỗi: Nhận được {len(raw_template)} byte, không đủ 512 byte.")
+                        print(f"Lỗi: Nhận được {len(fingerprint_id)} byte, Yêu cầu 1 byte.")
                         return None
                 else:
+                    message_uart[0] = decoded_response
                     return None
             except Exception as e:
                 print(f"Lỗi khi đọc phản hồi: {e}")
@@ -105,8 +125,15 @@ def cosine_similarity(data1, data2, threshold=0.8):
     vector1 = list(data1)
     vector2 = list(data2)
     # Tính độ tương đồng (khoảng cách của 2 mẫu dữ liệu)
-    similarity = 1 - distance.cosine(vector1, vector2) # Tính góc cosine giữa 2 vector
-    return similarity >= threshold, similarity
+    dot_product = sum(vector1[i] * vector2[i] for i in range(len(vector1)))
+    magnitude_a = math.sqrt(sum(x**2 for x in vector1))
+    magnitude_b = math.sqrt(sum(x**2 for x in vector2))
+
+    if magnitude_a == 0 or magnitude_b == 0:
+        return 1 - 1.0
+    # similarity = 1 - distance.cosine(vector1, vector2) # Tính góc cosine giữa 2 vector
+    # return similarity >= threshold, similarity
+    return (1 - (dot_product / (magnitude_a * magnitude_b))) > threshold, 1 - (dot_product / (magnitude_a * magnitude_b))
 
 def compare_templates(template1, template2):
         """
@@ -119,17 +146,14 @@ def compare_templates(template1, template2):
 
 ############################## Thuật toán Minutiae-based Matching ##################################
 def minutiae_based_matching(template1, template2, threshold=0.6):
+    # Hàm trích xuất minutiae từ mẫu vân tay
     def extract_minutiae_details(template):
         minutiae = []
-        # Mỗi minutiae chiếm 32 byte, tổng cộng có 512 byte (16 minutiae)
-        for i in range(0, len(template), 32):  # Lặp qua các bloc 32 byte
-            # Trích xuất thông tin minutiae từ mỗi bloc 32 byte
-            x = (template[i] << 8) | template[i+1]    # 2 byte đầu tiên cho tọa độ x
-            y = (template[i+2] << 8) | template[i+3]  # 2 byte tiếp theo cho tọa độ y
-            angle = template[i+4]                     # 1 byte tiếp theo cho góc
-            minutiae_type = template[i+5]             # 1 byte cho loại minutiae (0: đầu, 1: nhánh)
-
-
+        for i in range(0, len(template), 8):  # Mỗi minutiae chiếm 8 byte
+            x = (template[i] << 8) | template[i+1]    # Tọa độ x (2 byte)
+            y = (template[i+2] << 8) | template[i+3]  # Tọa độ y (2 byte)
+            angle = template[i+4]                     # Góc (1 byte)
+            minutiae_type = template[i+5]             # Loại minutiae (0: đầu, 1: nhánh)
             minutiae.append({
                 'x': x,
                 'y': y,
@@ -138,40 +162,43 @@ def minutiae_based_matching(template1, template2, threshold=0.6):
             })
         return minutiae
 
+    # Hàm tính toán sự khớp giữa 2 minutiae
     def calculate_minutiae_match(point1, point2):
-        # Tính khoảng cách
-        distance = math.sqrt((point1['x'] - point2['x'])**2 +
-                             (point1['y'] - point2['y'])**2)
+        # Tính khoảng cách Euclidean giữa 2 minutiae
+        distance = math.sqrt((point1['x'] - point2['x'])**2 + (point1['y'] - point2['y'])**2)
 
-        # Kiểm tra góc và loại điểm
+        # Kiểm tra góc giữa 2 minutiae
         angle_diff = abs(point1['angle'] - point2['angle'])
         if angle_diff > 180:  # Đảm bảo góc lệch không quá 180 độ
             angle_diff = 360 - angle_diff
 
+        # Kiểm tra loại minutiae (phải giống nhau: cả hai đều là đầu hoặc nhánh)
         type_match = point1['type'] == point2['type']
 
-        # Điều kiện khớp: khoảng cách < 10, góc chênh lệch < 15, cùng loại
-        return (distance < 30 and
-                angle_diff < 30 and
+        # Điều kiện khớp: khoảng cách < 10 pixel, góc lệch < 20 độ, loại minutiae phải giống nhau
+        return (distance < 10 and
+                angle_diff < 20 and
                 type_match)
 
-    # Trích xuất minutiae từ 2 mẫu
+    # Trích xuất minutiae từ 2 mẫu vân tay
     minutiae1 = extract_minutiae_details(template1)
     minutiae2 = extract_minutiae_details(template2)
 
-    # Đếm số điểm khớp
+    # Đếm số minutiae khớp
     match_count = 0
     for point1 in minutiae1:
         for point2 in minutiae2:
             if calculate_minutiae_match(point1, point2):
                 match_count += 1
-                break
+                break  # Một minutiae trong template1 đã khớp với một minutiae trong template2
 
-    # Tỉ lệ khớp
+    # Tính tỷ lệ khớp
     match_ratio = match_count / max(len(minutiae1), 1)  # Tránh chia cho 0
 
-    # So sánh với ngưỡng
+    # So sánh với ngưỡng để quyết định khớp hay không
     return match_ratio >= threshold, match_ratio
+
+############################## End thuật toán Minutiae-based Matching ##################################
 
 def cross_correlation(template1, template2, threshold=50):
     """
@@ -198,7 +225,6 @@ def cross_correlation(template1, template2, threshold=50):
 
     return confidence >= threshold, confidence
 
-############################## End thuật toán Minutiae-based Matching ##################################
 
 if __name__ == "__main__":
     listFingerTemplate = [b'0', b'0']
@@ -206,6 +232,7 @@ if __name__ == "__main__":
     count = 1
     flag = 0
     uart.send_command("GET_FINGERPRINT1")
+
     while True:
         try:
             # Gửi lệnh yêu cầu dữ liệu
@@ -214,7 +241,7 @@ if __name__ == "__main__":
             flag += 1
             print(count)
             time.sleep(1)
-            response = uart.read_response()
+            response = uart.read_response(onreset=False)
             if response:
                 if response["type"] == "RFID":
                     print(f"Nhận được RFID ID: {response['data']}")
@@ -228,7 +255,7 @@ if __name__ == "__main__":
 
             if flag % 2 == 0:
                 if len(listFingerTemplate[0]) == 512 and len(listFingerTemplate[1]) == 512:
-                    print(f"{listFingerTemplate[0].hex()} - {listFingerTemplate[1].hex()}")
+                    print(f"{listFingerTemplate[0]} - {listFingerTemplate[1]}")
                     jaccard_score = jaccard_index(listFingerTemplate[0], listFingerTemplate[1])
                     ret, similarity = cosine_similarity(listFingerTemplate[0], listFingerTemplate[1])
                     match_score = minutiae_based_matching(listFingerTemplate[0], listFingerTemplate[1], threshold=0.6)
@@ -246,6 +273,11 @@ if __name__ == "__main__":
                     print(f"Tỉ lệ tương đồng: {distance___:.2f}%")
                     print(f"Tỉ lệ tương đồng với thuật toán Cross-Correlation: {confidence}%")
                     print(isinstance(listFingerTemplate[0], bytes))
+
+            yesorno = input("-> Sent command (y/n): ")
+            if yesorno.lower() == 'y':
+                uart.send_command("GET_FINGERPRINT1")
+
 
         finally:
             # Đóng kết nối UART

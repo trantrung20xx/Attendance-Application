@@ -8,7 +8,7 @@ from Lib.odbemployee import ODBEmployee
 from Lib.employee_management import EmployeeManagement
 from Lib import face_dataset, face_training
 from Lib.attendance_live_tab import face_cascade, video, clahe
-from Lib import attendance_live_tab
+from Lib import attendance_live_tab, message_uart, unlinked_fingerprint, unlinked_fingerprint_list
 
 hasAuthenticated = False
 flag_hasFaceID = False
@@ -113,7 +113,13 @@ def create_add_employee_tab(notebook, send_command_to_esp32, esp32_data_callback
         def wait_for_response():
             global hasAuthenticated
             on_counter = [True]
-            send_command_to_esp32(command)
+            send_command_to_esp32(command) # Gửi lệnh
+            if command == "GET_FINGERPRINT1":
+                send_command_to_esp32(ODBEmployee.get_fingerprint_id(), endline=False, number=True) # Gửi ID (vị trí ô nhớ trong AS608) tương ứng với vân tay
+                unlinked_fingerprint_list.add(ODBEmployee.get_fingerprint_id())
+            if command == "GET_FINGERPRINT2":
+                send_command_to_esp32(ODBEmployee.get_fingerprint_id(ord(ODBEmployee.get_fingerprint_id()) + 1), endline=False, number=True) # Gửi ID (vị trí ô nhớ trong AS608) tương ứng với vân tay
+                unlinked_fingerprint_list.add(ODBEmployee.get_fingerprint_id(ord(ODBEmployee.get_fingerprint_id()) + 1))
             status_label.config(text="Đã gửi", foreground="orange")
             add_employee_tab.after(10000, lambda: message_label.config(text=""))
             timeout_counter(10, instructions, on_counter, status_label)
@@ -140,14 +146,18 @@ def create_add_employee_tab(notebook, send_command_to_esp32, esp32_data_callback
                         status_label.config(text=success_text, foreground="green")
                         hasAuthenticated = True
                         on_counter[0] = False
+                        unlinked_fingerprint[0] = True
                     else:
                         variable[0] = None
                         on_counter[0] = False
+                        unlinked_fingerprint[0] = False
                         status_label.config(text="Thêm thất bại!", foreground="red")
             else:
                 variable[0] = None
                 on_counter[0] = False
-                message_label.config(text="Không nhận được dữ liệu. Hãy gửi lại lệnh", foreground="red")
+                unlinked_fingerprint[0] = False
+                message_label.config(text=message_uart[0] if message_uart[0] else "Không nhận được dữ liệu. Hãy gửi lại lệnh", foreground="red")
+                message_uart[0] = None
 
         threading.Thread(target=wait_for_response, daemon=True).start()
 
@@ -222,12 +232,27 @@ def create_add_employee_tab(notebook, send_command_to_esp32, esp32_data_callback
 
             name_entry.delete(0, tk.END) # Làm trống ô nhập liệu
             department_entry.delete(0, tk.END) # Làm trống ô nhập liệu
+            unlinked_fingerprint_list.discard(fingerprint_data_1[0])
+            unlinked_fingerprint_list.discard(fingerprint_data_2[0])
             fingerprint_data_1[0] = None
             fingerprint_data_2[0] = None
             rfid_data[0] = None
+            unlinked_fingerprint[0] = False
         except Exception as e:
             message_label.config(text=f"Thêm nhân viên thất bại: {str(e)}", foreground="red")
             shutil.rmtree(os.path.join(face_training.base_path, new_employee.employee_id))
+            if fingerprint_data_1[0]:
+                send_command_to_esp32("DELETE_FINGERPRINT")
+                send_command_to_esp32(fingerprint_data_1[0], endline=False, number=True)
+                unlinked_fingerprint[0] = False
+                unlinked_fingerprint_list.discard(fingerprint_data_1[0])
+                fingerprint_data_1[0] = None
+            if fingerprint_data_2[0]:
+                send_command_to_esp32("DELETE_FINGERPRINT")
+                send_command_to_esp32(fingerprint_data_2[0], endline=False, number=True)
+                unlinked_fingerprint[0] = False
+                unlinked_fingerprint_list.discard(fingerprint_data_2[0])
+                fingerprint_data_2[0] = None
             threading.Thread(target=lambda: face_training.train_and_save_model(face_training.base_path, face_training.yml_file_path), daemon=True).start()
             flag_hasFaceID = False
         finally:

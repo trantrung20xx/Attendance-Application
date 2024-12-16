@@ -232,10 +232,10 @@ def attandance_with_uart_data(uart, info_labels):
                         match_score2 = 0 # Tỉ lệ khớp của hai mẫu (vân tay thứ hai với vân tay đọc được)
                         # Nếu nhân viên có vân tay đầu tiên
                         if employee.fingerprint_data_1:
-                            ret_fingerprint1, match_score = hamming_distance(employee.fingerprint_data_1, response["data"], threshold=90)
+                            ret_fingerprint1, match_score = hamming_distance(employee.fingerprint_data_1, response["data"], threshold=85)
                         # Nếu nhân viên có vân tay thứ hai
                         if employee.fingerprint_data_2:
-                            ret_fingerprint2, match_score2 = hamming_distance(employee.fingerprint_data_2, response["data"], threshold=90)
+                            ret_fingerprint2, match_score2 = hamming_distance(employee.fingerprint_data_2, response["data"], threshold=85)
                         # Nếu một trong 2 mẫu khớp với mẫu đọc được -> điểm danh và cập nhật thông tin
                         if ret_fingerprint1 or ret_fingerprint2:
                             print(employee.name, " - ", match_score, " - ", match_score2)
