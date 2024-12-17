@@ -123,7 +123,7 @@ def create_add_employee_tab(notebook, send_command_to_esp32, esp32_data_callback
             status_label.config(text="Đã gửi", foreground="orange")
             add_employee_tab.after(10000, lambda: message_label.config(text=""))
             timeout_counter(10, instructions, on_counter, status_label)
-            time.sleep(0.5) # Đợi để gửi dữ liệu tới ESP8266
+            time.sleep(0.1) # Đợi để gửi dữ liệu tới ESP8266
             response = esp32_data_callback() # Nhận phản hồi từ ESP8266
             if response:
                 # Nhận ID RFID từ ESP8266

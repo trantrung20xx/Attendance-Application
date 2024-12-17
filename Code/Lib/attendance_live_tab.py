@@ -178,7 +178,7 @@ def attandance_with_uart_data(uart, info_labels):
     # Làm mới bộ đêm trước khi gửi dữ liệu
     uart.serial.reset_output_buffer()
     uart.send_command("GET_DATA")
-    time.sleep(0.3)
+    time.sleep(0.2)
     is_attended_employee = False # Biến xác nhận người điểm danh có trong công ty hay không
 
     while on_attandance[0]:
@@ -224,34 +224,30 @@ def attandance_with_uart_data(uart, info_labels):
 
                 # Xử lý vân tay
                 elif response["type"] == "FINGERPRINT" and isinstance(response["data"], bytes):
-                    employee_best_confidence = (None, 0) # Lưu nhân viên có tỉ lệ trùng khớp cao nhất
+                    employee_matched = None # Lưu nhân viên Khi trùng vân tay
                     for employee in employee_list:
-                        ret_fingerprint1 = False # Trạng thái khớp hay không khớp của vân tay đầu tiên
-                        ret_fingerprint2 = False # Trạng thái khớp hay không khớp của vân tay thứ hai
-                        match_score = 0 # Tỉ lệ khớp của hai mẫu (vân tay đầu tiên với vân tay đọc được)
-                        match_score2 = 0 # Tỉ lệ khớp của hai mẫu (vân tay thứ hai với vân tay đọc được)
-                        # Nếu nhân viên có vân tay đầu tiên
+                        # Nếu nhân viên có vân tay đầu tiên khớp
                         if employee.fingerprint_data_1:
-                            ret_fingerprint1, match_score = hamming_distance(employee.fingerprint_data_1, response["data"], threshold=85)
-                        # Nếu nhân viên có vân tay thứ hai
+                            if employee.fingerprint_data_1 == response["data"]:
+                                employee_matched = employee
+                                break
+                        # Nếu nhân viên có vân tay thứ hai khớp
                         if employee.fingerprint_data_2:
-                            ret_fingerprint2, match_score2 = hamming_distance(employee.fingerprint_data_2, response["data"], threshold=85)
-                        # Nếu một trong 2 mẫu khớp với mẫu đọc được -> điểm danh và cập nhật thông tin
-                        if ret_fingerprint1 or ret_fingerprint2:
-                            print(employee.name, " - ", match_score, " - ", match_score2)
-                            # Chỉ lấy nhân viên có tỉ lệ mẫu khớp với mẫu đọc được cao nhất
-                            if employee_best_confidence[1] < max(match_score, match_score2): # Nếu độ tin cậy cao hơn ngưỡng và tốt hơn mẫu trước, cập nhật lại nhân viên
-                                employee_best_confidence = (employee, max(match_score, match_score2))
-                    # Nếu có thông tin của nhân viên trong cơ cở dữ liệu khớp với mẫu -> điểm danh
-                    if employee_best_confidence[0] is not None:
-                        if employee_best_confidence[0].status_1 == '-':
-                            employee_best_confidence[0].check_in()
-                            update_info_text(info_labels, check_type="check_in", employee=employee_best_confidence[0])
-                        elif employee_best_confidence[0].status_1!= '-':
-                            employee_best_confidence[0].check_out()
-                            update_info_text(info_labels, check_type="check_out", employee=employee_best_confidence[0])
+                            if employee.fingerprint_data_2 == response["data"]:
+                                employee_matched = employee
+                                break
+                    if employee_matched:
+                        print("Matched - ", employee.employee_id, " - ", employee.name)
+                        # Nếu có thông tin của nhân viên trong cơ cở dữ liệu khớp với mẫu -> điểm danh
+                        if employee_matched.status_1 == '-':
+                            employee_matched.check_in()
+                            update_info_text(info_labels, check_type="check_in", employee=employee_matched)
+                        elif employee_matched.status_1!= '-':
+                            employee_matched.check_out()
+                            update_info_text(info_labels, check_type="check_out", employee=employee_matched)
                     # Nếu không tìm thấy thông tin trong cơ sở dữ liệu (không phải người của công ty)
                     else:
+                        print("Not match")
                         update_info_text(info_labels, check_type="Unknown")
 
         except Exception as e:

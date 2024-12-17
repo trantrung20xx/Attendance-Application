@@ -57,7 +57,7 @@ class UARTCommunication:
                     self.serial.reset_input_buffer()  # Xóa bộ đệm
                     # Lấy ID RFID
                     line = decoded_response.split('|')
-                    if len(line) == 2 and len(line[1]) == 8:
+                    if len(line) == 2 and (len(line[1]) in [6, 7, 8]):
                         return {"type": "RFID", "data": line[1]}
                 elif decoded_response.startswith("FINGERPRINT|"):
                     # Lấy mẫu vân tay
@@ -65,9 +65,9 @@ class UARTCommunication:
                     # if len(raw_template) == 512: # Kiểm tra độ dài dữ liệu
                     fingerprint_id = self.serial.read(1) # Đọc 1 byte dữ liệu ID của vân tay
                     print("ID: ", fingerprint_id)
+                    # Sau khi nhận dữ liệu, làm sạch bộ đệm
+                    self.serial.reset_input_buffer()  # Xóa bộ đệm
                     if len(fingerprint_id) == 1: # Kiểm tra độ dài dữ liệu
-                        # Sau khi nhận dữ liệu, làm sạch bộ đệm
-                        self.serial.reset_input_buffer()  # Xóa bộ đệm
                         return {"type": "FINGERPRINT", "data": fingerprint_id}
                     else:
                         # print(f"Lỗi: Nhận được {len(raw_template)} byte, không đủ 512 byte.")

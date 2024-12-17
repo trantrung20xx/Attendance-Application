@@ -17,18 +17,16 @@ def deleteOrphanedFingerprint():
         uart.send_command(fingerprint_id, endline=False, number=True)
         response = uart.serial.readline().decode("utf-8").strip()
         print(response)
-        if response != "FINGERPRINT_OK":
-            break
         unlinked_fingerprint_list.discard(fingerprint_id)
     unlinked_fingerprint[0] = False
 def on_tab_change(event):
     # Kiểm tra tab hiện tại
     selected_tab = notebook.tab(notebook.select(), "text")
     if selected_tab == "Điểm danh":
-        get_employee_list(employee_list) # Cập nhật lại danh sách nhân viên
-        stop_recognition() # Tắt điểm danh khuôn mặt
         if unlinked_fingerprint[0]: # Nếu thêm id vân tay nhưng chưa liên kết id đó với nhân viên nào
             deleteOrphanedFingerprint() # Xóa các id vân tay không được liên kết với bất kì nhân viên nào
+        get_employee_list(employee_list) # Cập nhật lại danh sách nhân viên
+        stop_recognition() # Tắt điểm danh khuôn mặt
         on_attandance[0] = True # Bật lại chức năng điểm danh với vân tay và rfid
         if not uart_thread[0] or not uart_thread[0].is_alive():
             uart_thread[0] = threading.Thread(target=attandance_with_uart_data, args=(uart, info_labels,))
@@ -40,10 +38,10 @@ def on_tab_change(event):
             on_attandance[0] = False # Tắt chức năng điểm danh với rfid và vân tay
         stop_recognition() # Tắt điểm danh khuôn mặt
     elif selected_tab == "Danh sách điểm danh":
-        refresh_attendance_table()  # Làm mới danh sách điểm danh
-        stop_recognition() # Tắt điểm danh khuôn mặt
         if unlinked_fingerprint[0]: # Nếu thêm id vân tay nhưng chưa liên kết id đó với nhân viên nào
             deleteOrphanedFingerprint() # Xóa các id vân tay không được liên kết với bất kì nhân viên nào
+        refresh_attendance_table()  # Làm mới danh sách điểm danh
+        stop_recognition() # Tắt điểm danh khuôn mặt
         on_attandance[0] = True # Bật lại chức năng điểm danh với vân tay và rfid
         if not uart_thread[0] or not uart_thread[0].is_alive():
             uart_thread[0] = threading.Thread(target=attandance_with_uart_data, args=(uart, info_labels,))

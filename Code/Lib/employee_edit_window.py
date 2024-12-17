@@ -16,6 +16,7 @@ has_changed = [False]
 # Biến ghi nhận thay đổi dữ liệu của vân tay
 fingerprint_data_1 = [None]
 fingerprint_data_2 = [None]
+numberOfChange = [0, 0]
 
 class EmployeeEditWindow:
     def __init__(self, root, employee, update_employee_list):
@@ -26,6 +27,9 @@ class EmployeeEditWindow:
         self.window = tk.Toplevel(self.root)
         self.window.title(f"Chỉnh sửa nhân viên mã: {employee.employee_id}")
         self.window.geometry("800x350")
+
+        # Cấu hình sự kiện đóng cửa sổ
+        self.window.protocol("WM_DELETE_WINDOW", self.on_close)
 
         # Cấu hình grid cho cửa sổ chính
         self.window.grid_rowconfigure(0, weight=1)
@@ -111,6 +115,11 @@ class EmployeeEditWindow:
         # Tải dữ liệu nhân viên vào các trường nhập liệu
         self.load_employee_data()
 
+    def on_close(self):
+        numberOfChange[0] = 0
+        numberOfChange[1] = 0
+        self.window.destroy()  # Đóng cửa sổ
+
     def load_employee_data(self):
         if self.employee:
             # Tải dữ liệu nhân viên vào các trường nhập liệu
@@ -175,7 +184,7 @@ class EmployeeEditWindow:
             status_label.config(text="Đã gửi", fg="orange")
             self.window.after(10000, lambda: self.message_label.config(text=""))
             self.timeout_counter(10, instructions, on_counter, status_label)
-            time.sleep(0.3) # Đợi để gửi dữ liệu tới ESP8266
+            time.sleep(0.1) # Đợi để gửi dữ liệu tới ESP8266
 
             # Nhận phản hồi từ ESP8266
             response = uart.read_response()
@@ -266,7 +275,9 @@ class EmployeeEditWindow:
         self.send_and_wait("GET_FINGERPRINT1", self.fingerprint1_status, "Vui lòng đặt ngón tay lên cảm biến...", "Đã thêm vân tay 1")
 
     def remove_fingerprint1(self):
-        fingerprint_data_1[0] = self.employee.fingerprint_data_1
+        if numberOfChange[0] == 0:
+            fingerprint_data_1[0] = self.employee.fingerprint_data_1
+            numberOfChange[0] = 1
         self.employee.fingerprint_data_1 = None
         self.fingerprint1_status.config(text="Chưa thêm", fg="red")
         self.remove_fingerprint1_button.config(state="disabled")
@@ -276,7 +287,9 @@ class EmployeeEditWindow:
         self.send_and_wait("GET_FINGERPRINT2", self.fingerprint2_status, "Vui lòng đặt ngón tay lên cảm biến...", "Đã thêm vân tay 2")
 
     def remove_fingerprint2(self):
-        fingerprint_data_2[0] = self.employee.fingerprint_data_2
+        if numberOfChange[1] == 0:
+            fingerprint_data_2[0] = self.employee.fingerprint_data_2
+            numberOfChange[1] = 1
         self.employee.fingerprint_data_2 = None
         self.fingerprint2_status.config(text="Chưa thêm", fg="red")
         self.remove_fingerprint2_button.config(state="disabled")
@@ -325,20 +338,19 @@ class EmployeeEditWindow:
                 threading.Thread(target=self.perform_training, daemon=True).start()
                 has_changed[0] = False # Đặt lại trạng thái khuôn mặt sau khi lưu
             if fingerprint_data_1[0]:
-                uart.send_command("DELETE_FINGERPRINT") # Gửi lệnh xóa vân tay xuống ESP8266
-                uart.send_command(fingerprint_data_1[0], endline=False, number=True) # Gửi ID muốn xóa
-                unlinked_fingerprint_list.discard(fingerprint_data_1[0])
+                unlinked_fingerprint_list.add(fingerprint_data_1[0])
                 fingerprint_data_1[0] = None
+                unlinked_fingerprint[0] = True
             if fingerprint_data_2[0]:
-                uart.send_command("DELETE_FINGERPRINT") # Gửi lệnh xóa vân tay xuống ESP8266
-                uart.send_command(fingerprint_data_2[0], endline=False, number=True) # Gửi ID muốn xóa
-                unlinked_fingerprint_list.discard(fingerprint_data_2[0])
+                unlinked_fingerprint_list.add(fingerprint_data_2[0])
                 fingerprint_data_2[0] = None
-            unlinked_fingerprint[0] = False
+                unlinked_fingerprint[0] = True
             self.update_biometric_status() # Cập nhật trạng thái giao diện
             self.window.destroy()
             unlinked_fingerprint_list.discard(self.employee.fingerprint_data_1)
             unlinked_fingerprint_list.discard(self.employee.fingerprint_data_2)
+            numberOfChange[0] = 0
+            numberOfChange[1] = 0
         else:
             messagebox.showerror("Lỗi", "Cập nhật thất bại.")
             if has_changed[0]: # Nếu dữ liệu khuôn mặt đã có thay đổi
@@ -348,8 +360,6 @@ class EmployeeEditWindow:
                     uart.send_command("DELETE_FINGERPRINT")
                     uart.send_command(fingerprint_id, endline=False, number=True)
                     response = uart.serial.readline().decode("utf-8").strip()
-                    print(response)
-                    if response != "FINGERPRINT_OK":
-                        break
+                    print("In edit tab: ", response)
                     unlinked_fingerprint_list.discard(fingerprint_id)
                 unlinked_fingerprint[0] = False
