@@ -6,7 +6,7 @@ from tkinter.ttk import Frame, Label, Entry, Button, Style
 import threading
 from Lib.odbemployee import ODBEmployee
 from Lib.employee_management import EmployeeManagement
-from Lib import face_dataset, face_training
+from Lib import face_dataset, face_training, get_employee_list, employee_list
 from Lib.attendance_live_tab import face_cascade, video, clahe
 from Lib import attendance_live_tab, message_uart, unlinked_fingerprint, unlinked_fingerprint_list
 
@@ -229,7 +229,6 @@ def create_add_employee_tab(notebook, send_command_to_esp32, esp32_data_callback
                 flag_hasFaceID = False
             else:
                 message_label.config(text="Thêm nhân viên thành công!", foreground="green")
-
             name_entry.delete(0, tk.END) # Làm trống ô nhập liệu
             department_entry.delete(0, tk.END) # Làm trống ô nhập liệu
             unlinked_fingerprint_list.discard(fingerprint_data_1[0])
@@ -238,6 +237,7 @@ def create_add_employee_tab(notebook, send_command_to_esp32, esp32_data_callback
             fingerprint_data_2[0] = None
             rfid_data[0] = None
             unlinked_fingerprint[0] = False
+            get_employee_list(employee_list) # Cập nhật lại danh sách nhân viên
         except Exception as e:
             message_label.config(text=f"Thêm nhân viên thất bại: {str(e)}", foreground="red")
             shutil.rmtree(os.path.join(face_training.base_path, new_employee.employee_id))

@@ -6,7 +6,7 @@ from Lib.employee_management import EmployeeManagement
 from Lib import face_training
 import threading
 from Lib.employee_edit_window import EmployeeEditWindow
-from Lib import attendance_live_tab, unlinked_fingerprint, unlinked_fingerprint_list
+from Lib import attendance_live_tab, unlinked_fingerprint, unlinked_fingerprint_list, get_employee_list, employee_list
 
 # from employee_management import EmployeeManagement
 
@@ -71,7 +71,7 @@ def create_employee_management_tab(notebook, width, height):
     def update_employee_list():
         tree.delete(*tree.get_children()) # Xóa tất cả các dòng hiện tại
         # Lấy danh sách nhân viên mới từ cơ sở dữ liệu
-        employee_list = EmployeeManagement.fetch_all_employees() # Dữ liệu mới
+        get_employee_list(employee_list) # Lấy liệu mới cho employee_list
         if employee_list:
             attendance_live_tab.is_recognizer_initialized = False
         for index, employee in enumerate(employee_list):

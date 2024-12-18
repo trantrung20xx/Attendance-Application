@@ -42,6 +42,7 @@ def on_tab_change(event):
             deleteOrphanedFingerprint() # Xóa các id vân tay không được liên kết với bất kì nhân viên nào
         refresh_attendance_table()  # Làm mới danh sách điểm danh
         stop_recognition() # Tắt điểm danh khuôn mặt
+        get_employee_list(employee_list) # Cập nhật lại danh sách nhân viên
         on_attandance[0] = True # Bật lại chức năng điểm danh với vân tay và rfid
         if not uart_thread[0] or not uart_thread[0].is_alive():
             uart_thread[0] = threading.Thread(target=attandance_with_uart_data, args=(uart, info_labels,))

@@ -7,7 +7,7 @@ from tkinter.ttk import *
 import threading
 from Lib.employee_management import EmployeeManagement
 from Lib.odbemployee import ODBEmployee
-from Lib import face_dataset, face_training
+from Lib import face_dataset, face_training, get_employee_list, employee_list
 from Lib import attendance_live_tab, uart, message_uart, unlinked_fingerprint, unlinked_fingerprint_list
 from Lib.attendance_live_tab import face_cascade, video, clahe
 
@@ -351,6 +351,7 @@ class EmployeeEditWindow:
             unlinked_fingerprint_list.discard(self.employee.fingerprint_data_2)
             numberOfChange[0] = 0
             numberOfChange[1] = 0
+            get_employee_list(employee_list) # Cập nhật lại danh sách nhân viên
         else:
             messagebox.showerror("Lỗi", "Cập nhật thất bại.")
             if has_changed[0]: # Nếu dữ liệu khuôn mặt đã có thay đổi
