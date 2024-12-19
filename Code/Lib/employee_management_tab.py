@@ -99,9 +99,9 @@ def create_employee_management_tab(notebook, width, height):
         if column == "#5": # Cột Tùy chọn
             # action = event.widget.item(selected_item)["values"][-1] <=> selected_employee[-1]
             x_offset = event.x
-            if 800 <= x_offset <= 873 or 1282 <= x_offset <= 1355: # Nhấn vào Chỉnh sửa
+            if 836 <= x_offset <= 890 or 1298 <= x_offset <= 1355: # Nhấn vào Chỉnh sửa
                 open_edit_window(employee_id)
-            elif 884 <= x_offset <= 912 or 1365 <= x_offset <= 1395: # Nhấn vào Xóa
+            elif 898 <= x_offset <= 919 or 1362 <= x_offset <= 1385: # Nhấn vào Xóa
                 delete_employee(employee_id)
 
     # Nút chỉnh sửa thông tin nhân viên
