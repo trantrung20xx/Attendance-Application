@@ -22,8 +22,12 @@ def create_add_employee_tab(notebook, send_command_to_esp32, esp32_data_callback
 
     # Tiêu đề chính
     title = Label(
-        add_employee_tab, text="Thêm Nhân Viên Mới",
-        font=("Arial", 20, "bold"), anchor="center"
+        add_employee_tab,
+        text="👤 Thêm Nhân Viên Mới",
+        font=("Arial", 24, "bold"),
+        anchor="center",
+        foreground="#ffffff",
+        background="#4caf50"
     )
     title.grid(row=0, column=0, columnspan=2, pady=(10, 20), sticky="ew")
 
@@ -31,9 +35,13 @@ def create_add_employee_tab(notebook, send_command_to_esp32, esp32_data_callback
     basic_info_frame = Frame(add_employee_tab, padding=10, style="TFrame")
     basic_info_frame.grid(row=1, column=0, padx=20, pady=10, sticky="nsew")
 
-    Label(basic_info_frame, text="Thông tin cơ bản", font=("Arial", 16, "bold")).grid(
-        row=0, column=0, columnspan=2, pady=10
-    )
+    Label(
+        basic_info_frame,
+        text="📝 Thông tin cơ bản",
+        font=("Arial", 16, "bold"),
+        foreground="#4caf50"
+    ).grid(row=0, column=0, columnspan=2, pady=10)
+
     Label(basic_info_frame, text="Họ và tên:", font=("Arial", 12)).grid(row=1, column=0, padx=10, pady=5, sticky="e")
     name_entry = Entry(basic_info_frame, font=("Arial", 12), width=30)
     name_entry.grid(row=1, column=1, padx=10, pady=5)
@@ -46,9 +54,12 @@ def create_add_employee_tab(notebook, send_command_to_esp32, esp32_data_callback
     data_entry_frame = Frame(add_employee_tab, padding=10, style="TFrame")
     data_entry_frame.grid(row=1, column=1, padx=20, pady=10, sticky="nsew")
 
-    Label(data_entry_frame, text="Thêm dữ liệu sinh trắc học", font=("Arial", 16, "bold")).grid(
-        row=0, column=0, columnspan=2, pady=10
-    )
+    Label(
+        data_entry_frame,
+        text="📊 Thêm dữ liệu sinh trắc học",
+        font=("Arial", 16, "bold"),
+        foreground="#4caf50"
+    ).grid(row=0, column=0, columnspan=2, pady=10)
 
     # Nút trạng thái và hành động
     def create_status_row(frame, row, label_text, command, status_label_text):
@@ -57,7 +68,11 @@ def create_add_employee_tab(notebook, send_command_to_esp32, esp32_data_callback
         status_label.grid(row=row, column=1, padx=10, pady=5, sticky="w")
 
         action_button = Button(
-            frame, text="Gửi lệnh", command=command, style="TButton"
+            frame,
+            text="Gửi lệnh 🚀",
+            command=command,
+            style="Custom.TButton",
+            padding=[10, 5]
         )
         action_button.grid(row=row, column=2, padx=10, pady=5)
 
@@ -163,22 +178,22 @@ def create_add_employee_tab(notebook, send_command_to_esp32, esp32_data_callback
 
     # Sinh trắc học
     face_status = create_status_row(
-        data_entry_frame, 1, "Khuôn mặt:",
-        add_face,
+        data_entry_frame, 1, "📷 Khuôn mặt:",
+        lambda: add_face(),
         "Chưa thêm"
     )
     fingerprint1_status = create_status_row(
-        data_entry_frame, 2, "Vân tay 1:",
+        data_entry_frame, 2, "✋ Vân tay 1:",
         lambda: send_and_wait("GET_FINGERPRINT1", fingerprint_data_1, fingerprint1_status, "Vui lòng đặt ngón tay lên cảm biến...", "Đã thêm vân tay 1"),
         "Chưa thêm"
     )
     fingerprint2_status = create_status_row(
-        data_entry_frame, 3, "Vân tay 2:",
+        data_entry_frame, 3, "✋ Vân tay 2:",
         lambda: send_and_wait("GET_FINGERPRINT2", fingerprint_data_2, fingerprint2_status, "Vui lòng đặt ngón tay lên cảm biến...", "Đã thêm vân tay 2"),
         "Chưa thêm"
     )
     rfid_status = create_status_row(
-        data_entry_frame, 4, "RFID:",
+        data_entry_frame, 4, "📛 RFID:",
         lambda: send_and_wait("GET_RFID", rfid_data, rfid_status, "Vui lòng đặt thẻ lên cảm biến...", "Đã thêm RFID"),
         "Chưa thêm"
     )
@@ -264,11 +279,19 @@ def create_add_employee_tab(notebook, send_command_to_esp32, esp32_data_callback
 
     # Nút lưu
     style = Style()
-    style.configure("Custom.TButton", font=("Arial", 12))  # Định nghĩa font cho kiểu `Custom.TButton`
+    style.theme_use("clam")  # Sử dụng theme mặc định có thể tùy chỉnh
+    style.configure("Custom.TButton", font=("Arial", 14), foreground="#ffffff", background="#4caf50")
+    style.map(
+        "TButton",
+        background=[("active", "#388e3c"), ("!disabled", "#4caf50")],  # Màu khi nhấn nút
+        foreground=[("disabled", "#cccccc"), ("!disabled", "#ffffff")]
+    )
     save_button = Button(
-        add_employee_tab, text="Lưu Nhân Viên",
-        command=save_employee, style="Custom.TButton",
-        padding=[15, 7]
+        add_employee_tab,
+        text="💾 Lưu Nhân Viên",
+        command=lambda: save_employee(),
+        style="Custom.TButton",
+        padding=[20, 10]
     )
     save_button.grid(row=2, column=0, columnspan=2, pady=20)
 

@@ -79,12 +79,6 @@ notebook.add(employee_management_tab, text="Quản lý nhân viên")
 # Đặt notebook vào cửa sổ chính
 notebook.pack(expand=True, fill="both")
 
-# Nội dung của tab Danh sách điểm danh
-tkinter.Label(attendance_list_tab, text="Danh sách điểm danh", font=("Arial", 20), background="lightgreen").pack(pady=15)
-
-# Nội dung của tab Quản lý nhân viên
-tkinter.Label(employee_management_tab, text="Quản lý nhân viên", font=("Arial", 20), background="lightyellow").pack(pady=15)
-
 # Theo dõi sự kiện chuyển đổi tab
 notebook.bind("<<NotebookTabChanged>>", on_tab_change)
 
