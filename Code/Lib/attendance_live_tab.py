@@ -6,8 +6,8 @@ from tkinter import messagebox
 import traceback
 import PIL.Image, PIL.ImageTk
 import threading, time
-from Lib import face_recognition, face_dataset, face_training, employee_management
-from Lib import employee_list, on_attandance
+from Lib import face_recognition, face_dataset, face_training, employee_management,\
+                employee_list, on_attandance, attendance_list_tab
 from Lib.uart_communication import hamming_distance
 
 def initialize_video_components(width, height):
@@ -112,9 +112,11 @@ def update_info_text(info_labels, check_type, employee = None):
     if check_type == "check_in":
         info_labels["Thời gian"].config(text=employee.check_in_time if employee else " -")
         info_labels["Trạng thái"].config(text="Vào " + employee.status_1.lower() if employee else " -")
+        attendance_list_tab.attendance_list_app.refresh()  # Làm mới danh sách điểm danh
     elif check_type == "check_out":
         info_labels["Thời gian"].config(text=employee.check_out_time if employee else " -")
         info_labels["Trạng thái"].config(text="Ra " + employee.status_2.lower() if employee else " -")
+        attendance_list_tab.attendance_list_app.refresh()  # Làm mới danh sách điểm danh
     elif check_type == "Unknown":
         info_labels["Mã nhân viên"].config(text=" Không biết")
         info_labels["Tên nhân viên"].config(text=" Không biết")

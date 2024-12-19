@@ -5,8 +5,9 @@ import time
 from Lib.attendance_live_tab import create_attendance_live_tab, attandance_with_uart_data
 from Lib.employee_management_tab import create_employee_management_tab
 from Lib.addanew_employee import create_add_employee_tab
-from Lib.attendance_list_tab import create_attendance_list_tab, refresh_attendance_table
-from Lib import uart, employee_list, get_employee_list, on_attandance, odbemployee, unlinked_fingerprint, unlinked_fingerprint_list
+from Lib.attendance_list_tab import create_attendance_list_tab
+from Lib import uart, employee_list, get_employee_list, on_attandance, odbemployee,\
+                unlinked_fingerprint, unlinked_fingerprint_list
 
 uart_thread = [None]  # Quản lý luồng UART
 
@@ -40,7 +41,7 @@ def on_tab_change(event):
     elif selected_tab == "Danh sách điểm danh":
         if unlinked_fingerprint[0]: # Nếu thêm id vân tay nhưng chưa liên kết id đó với nhân viên nào
             deleteOrphanedFingerprint() # Xóa các id vân tay không được liên kết với bất kì nhân viên nào
-        refresh_attendance_table()  # Làm mới danh sách điểm danh
+        attendance_list_app.refresh()  # Làm mới danh sách điểm danh
         stop_recognition() # Tắt điểm danh khuôn mặt
         get_employee_list(employee_list) # Cập nhật lại danh sách nhân viên
         on_attandance[0] = True # Bật lại chức năng điểm danh với vân tay và rfid
@@ -54,7 +55,7 @@ def on_tab_change(event):
         stop_recognition() # Tắt điểm danh khuôn mặt
 
 window = tkinter.Tk()
-window.title("Tab Interface")
+window.title("Điểm danh công sở")
 window.geometry("1000x500")
 
 # Tạo một style mới để thay đổi font của tiêu đề tab
@@ -66,7 +67,7 @@ notebook = Notebook(window)
 
 # Tạo các frame cho từng tab
 attendance_live_tab, start_recognition, stop_recognition, info_labels = create_attendance_live_tab(notebook, width=1000, height=500) # Gọi hàm từ attendance_live_tab.py
-attendance_list_tab = create_attendance_list_tab(notebook, width=1000, height=500)
+attendance_list_tab, attendance_list_app = create_attendance_list_tab(notebook, width=1000, height=500)
 employee_management_tab, update_employee_list = create_employee_management_tab(notebook, width=1000, height=500)
 add_employee_tab = create_add_employee_tab(notebook, uart.send_command, uart.read_response, width=1000, height=500)
 # Thêm các frame vào notebook dưới dạng các tab

@@ -48,3 +48,7 @@ print(ord(max(list_byte)))
 print('-------------------------------------------------------------------------------')
 
 print(bytes([ord(ODBEmployee.get_fingerprint_id()) + 1]))
+
+from Lib import attendance_list_tab
+
+print(attendance_list_tab.fetch_attendance_logs())
