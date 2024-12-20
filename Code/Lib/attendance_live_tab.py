@@ -61,13 +61,13 @@ def create_info_frame(parent_frame):
         field_frame.pack(fill=tkinter.X, padx=10, pady=10)
 
         # Tên trường
-        field_label = tkinter.Label(field_frame, text=field + ":", font=("Arial", 14), bg="white")
+        field_label = tkinter.Label(field_frame, text=field + ":", font=("Arial", 13, "bold"), bg="white", anchor="w")
         field_label.pack(side=tkinter.LEFT, padx=5)
 
         # Ô hiển thị thông tin
         value_label = tkinter.Label(
-            field_frame, text="Trống", font=("Arial", 13), bg="white", anchor="w",
-            relief="flat", bd=0, highlightthickness=0, highlightcolor="black", highlightbackground="black"
+            field_frame, text="Trống", font=("Arial", 13), bg="white", fg="#333333", anchor="w",
+            relief="groove", bd=1
         )
         value_label.pack(side=tkinter.RIGHT, fill=tkinter.X, expand=True, padx=5, ipady=5)
         labels[field] = value_label  # Lưu Label vào dictionary để cập nhật sau
@@ -76,33 +76,36 @@ def create_info_frame(parent_frame):
 
 def create_controls_frame(parent_frame, start_recognition, stop_recognition):
     """Tạo frame chứa các nút chức năng."""
-    controls_frame = tkinter.Frame(parent_frame, bg='white')
+    controls_frame = tkinter.Frame(parent_frame, bg='#ffffff', relief="ridge", bd=2)
     controls_frame.pack(side=tkinter.BOTTOM, fill=tkinter.BOTH, padx=5, pady=(0, 5), ipady=5)
 
     # Tạo một frame cho các nút chức năng để dễ dàng điều khiển
-    button_frame = tkinter.Frame(controls_frame, bg='white')
+    button_frame = tkinter.Frame(controls_frame, bg='#ffffff')
     button_frame.pack(side=tkinter.TOP, fill=tkinter.X, padx=10, pady=10)
 
     # Tạo nút điều khiển Check-in
     check_in_button = tkinter.Button(
-        button_frame, text="Check-in", font=("Arial", 13),
+        button_frame, text="🔵 Check-in", font=("Arial", 13, "bold"),
+        bg="#4caf50", fg="white", activebackground="#388e3c", activeforeground="white",
         command=lambda: start_recognition("check_in")
     )
-    check_in_button.pack(side=tkinter.LEFT, expand=True, fill=tkinter.X, padx=5, ipady=5)
+    check_in_button.pack(side=tkinter.LEFT, expand=True, fill=tkinter.X, padx=10, pady=5, ipady=5)
 
     # Tạo nút điều khiển Check-out
     check_out_button = tkinter.Button(
-        button_frame, text="Check-out", font=("Arial", 13),
+        button_frame, text="🔴 Check-out", font=("Arial", 13, "bold"),
+        bg="#f44336", fg="white", activebackground="#d32f2f", activeforeground="white",
         command=lambda: start_recognition("check_out")
     )
-    check_out_button.pack(side=tkinter.LEFT, expand=True, fill=tkinter.X, padx=5, ipady=5)
+    check_out_button.pack(side=tkinter.LEFT, expand=True, fill=tkinter.X, padx=10, pady=5, ipady=5)
 
     # Tạo nút dừng nhận diện
     stop_button = tkinter.Button(
-        button_frame, text="Dừng", font=("Arial", 13),
+        button_frame, text="⏹️ Dừng", font=("Arial", 13, "bold"),
+        bg="#9e9e9e", fg="white", activebackground="#616161", activeforeground="white",
         command=stop_recognition
     )
-    stop_button.pack(side=tkinter.LEFT, expand=True, fill=tkinter.X, padx=5, ipady=5)
+    stop_button.pack(side=tkinter.LEFT, expand=True, fill=tkinter.X, padx=10, pady=5, ipady=5)
 
     return controls_frame
 
@@ -263,18 +266,18 @@ def attandance_with_uart_data(uart, info_labels):
     print("ENDED")
 
 def create_attendance_live_tab(parent_window, width, height):
-    attendance_frame = tkinter.Frame(parent_window, bg='lightblue', width=width, height=height)
+    attendance_frame = tkinter.Frame(parent_window, bg='#f5f5f5', width=width, height=height)
     attendance_frame.pack(fill=tkinter.BOTH, expand=True)
 
     # Chia frame thành hai phần (trái - video, phải - thông tin & nút)
-    main_frame = tkinter.Frame(attendance_frame)
+    main_frame = tkinter.Frame(attendance_frame, bg="#f5f5f5")
     main_frame.pack(fill=tkinter.BOTH, expand=True)
 
     # Lấy độ phân giải của video
     # canvas_width = int(video.get(cv2.CAP_PROP_FRAME_WIDTH))
     # canvas_height = int(video.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
-    # Tạo phần bên trái (video)
+    # Lấy độ phân giải của video
     canvas_width = 550
     canvas_height = 480
     canvas = create_video_frame(main_frame, canvas_width, canvas_height)
@@ -284,7 +287,7 @@ def create_attendance_live_tab(parent_window, width, height):
     running = [False]
 
     # Tạo phần bên phải (Chia thông tin và nút)
-    right_frame = tkinter.Frame(main_frame, height=canvas_height)
+    right_frame = tkinter.Frame(main_frame, bg='#ffffff', height=canvas_height, relief="ridge", bd=2)
     right_frame.pack(side=tkinter.LEFT, fill=tkinter.BOTH, expand=True, padx=10, pady=10)
 
     # Tạo phần bên trên hiển thị thông tin nhân viên
