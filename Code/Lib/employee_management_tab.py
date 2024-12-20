@@ -15,28 +15,30 @@ def create_employee_management_tab(notebook, width, height):
     Tạo tab 'Quản lý nhân viên' hiển thị danh sách nhân viên.
     """
     # Frame chính của tab 'Quản lý nhân viên'
-    employee_management_tab = tk.Frame(notebook, bg="lightyellow", width=width, height=height)
+    employee_management_tab = tk.Frame(notebook, bg="#e6f2ff", width=width, height=height)
 
     # Tiêu đề
     Label(
         employee_management_tab,
-        text="Danh sách nhân viên",
-        font=("Arial", 20),
-        background="lightyellow"
-    ).pack(pady=10)
+        text="👥 Quản Lý Nhân Viên",
+        font=("Arial", 24, "bold"),
+        background="#e6f2ff",
+        foreground="#1f4e79"
+    ).pack(pady=15)
 
     # Frame cho bảng danh sách
-    list_frame = Frame(employee_management_tab)
-    list_frame.pack(expand=True, fill="both", padx=10, pady=10)
+    list_frame = Frame(employee_management_tab, style="TFrame")
+    list_frame.pack(expand=True, fill="both", padx=20, pady=10)
 
     # Định nghĩa kiểu (Style) cho bảng
     style = Style()
-    style.configure("Treeview", font=("Arial", 12), rowheight=30)
-    style.configure("Treeview.Heading", font=("Arial", 12, "bold"), background="#f0f0f0", foreground="grey")
+    style.theme_use("default")
+    style.configure("Treeview", font=("Arial", 12), rowheight=40, background="#ffffff", fieldbackground="#ffffff")
+    style.configure("Treeview.Heading", font=("Arial", 14, "bold"), background="#4caf50", foreground="#ffffff")
     style.map(
         "Treeview",
-        background=[("selected", "#6baed6")],  # Màu nền khi được chọn
-        foreground=[("selected", "white")],  # Màu chữ khi được chọn
+        background=[("selected", "#b3e5fc")],  # Màu nền khi được chọn
+        foreground=[("selected", "black")],  # Màu chữ khi được chọn
     )
 
     # Tạo bảng hiển thị danh sách nhân viên
@@ -63,9 +65,9 @@ def create_employee_management_tab(notebook, width, height):
     # style.configure("evenrow", background="#f9f9f9") # Hàng chẵn
     # style.configure("oddrow", background="#eaf3fa") # Hàng lẻ
 
-    # Áp dụng các kiểu cho bảng
-    tree.tag_configure("evenrow", background="#eaf3fa")
-    tree.tag_configure("oddrow", background="#d7f9fa")
+    # Áp dụng các kiểu màu xen kẽ
+    tree.tag_configure("evenrow", background="#f3f7fa")  # Hàng chẵn
+    tree.tag_configure("oddrow", background="#eaf3fa")  # Hàng lẻ
 
     # Hàm cập nhật danh sách nhân viên
     def update_employee_list():

@@ -33,20 +33,23 @@ is_recognizer_initialized = False
 
 def create_video_frame(parent_frame, width, height):
     """Tạo frame để hiển thị video."""
-    video_frame = tkinter.Frame(parent_frame)
-    video_frame.pack(side=tkinter.LEFT, padx=5, pady=10, fill=tkinter.Y)
-    canvas = tkinter.Canvas(video_frame, width=width, height=height)
+    video_frame = tkinter.Frame(parent_frame, bg="#f5f5f5", relief="groove", bd=2)
+    video_frame.pack(side=tkinter.LEFT, padx=10, pady=10, fill=tkinter.Y)
+    canvas = tkinter.Canvas(video_frame, width=width, height=height, bg="#000000", highlightthickness=0)
     canvas.pack()
     return canvas
 
 def create_info_frame(parent_frame):
     """Tạo frame để hiển thị thông tin nhân viên."""
-    info_frame = tkinter.Frame(parent_frame, bg='white', height=480)
+    info_frame = tkinter.Frame(parent_frame, bg='#ffffff', height=480, relief="ridge", bd=2)
     info_frame.pack(side=tkinter.TOP, padx=5, pady=(5, 0), fill=tkinter.BOTH, expand=True)
 
     # Tiêu đề
-    info_label = tkinter.Label(info_frame, text="Thông tin điểm danh", font=("Arial", 17, "bold"), bg="white")
-    info_label.pack(anchor=tkinter.NW, padx=10, pady=(15, 25))
+    info_label = tkinter.Label(
+        info_frame, text="Thông tin điểm danh", font=("Arial", 18, "bold"),
+        bg="#4caf50", fg="white", anchor="w", padx=10, pady=10
+    )
+    info_label.pack(fill=tkinter.X)
 
     # Tạo các hàng/trường để hiển thị từng trường thông tin
     fields = ["Mã nhân viên", "Tên nhân viên", "Phòng ban", "Thời gian", "Trạng thái"]
